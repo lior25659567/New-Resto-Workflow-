@@ -7,7 +7,7 @@ import IconsPrepEdit from "../imports/IconsPrepEdit";
 import IconsSwapScans from "../imports/IconsSwapScans";
 import IconsUndo from "../imports/IconsUndo";
 import PrepCopilotButton from "./prep-copilot/PrepCopilotButton";
-import { UndoAcceptBadge, UndoToast, useUndoToast } from "./UndoToast";
+import { UndoToast, useUndoToast } from "./UndoToast";
 import type { ScanSnapshot } from "../hooks/useUndoHistory";
 
 interface ToolbarScanProps {
@@ -151,7 +151,7 @@ export function ToolbarScan({
                         ? 'shadow-[0_0_16px_rgba(0,200,220,0.35)]'
                         : 'bg-white hover:shadow-[0_0_12px_rgba(0,200,220,0.25)]'
                       : isSelected
-                      ? 'bg-[#A6E2F9]'
+                      ? 'bg-[#dff5fc] border border-[#00adef]'
                       : 'bg-white hover:bg-gray-50'
                   } active:scale-95 active:shadow-inner`}
                   style={

@@ -62,7 +62,7 @@ export default function UndoPill({
       {/* Divider */}
       <div className="w-px h-8 bg-[#E0E0E0]" />
 
-      {/* Accept */}
+      {/* Apply */}
       <button
         onClick={hasHistory ? onAccept : undefined}
         disabled={!hasHistory}
@@ -73,7 +73,7 @@ export default function UndoPill({
         }`}
         style={{ fontFamily: 'Roboto, sans-serif' }}
       >
-        Accept
+        Apply
       </button>
     </motion.div>
   );

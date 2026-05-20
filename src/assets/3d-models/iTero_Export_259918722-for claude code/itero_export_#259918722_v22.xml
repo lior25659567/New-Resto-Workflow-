@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="utf-8"?>
+<iTeroExport Version="2.2">
+	<RxInfo>
+		<CaseId>259918722</CaseId>
+		<FilePath/>
+		<ExportTime>10/26/2025 10:22:48</ExportTime>
+		<UtcOffset>0</UtcOffset>
+		<LabTechnician/>
+		<Patient>###########, ###########</Patient>
+		<ChartNumber/>
+		<Doctor>Soto Molero, Karla</Doctor>
+		<DoctorLicense>1111</DoctorLicense>
+		<DoctorID>1381546</DoctorID>
+		<LabName/>
+		<LabID/>
+		<PracticeShipToAddress>9882 Glades Road Boca Raton Florida United States 33434-3917</PracticeShipToAddress>
+		<DueDate>10/01/2025</DueDate>
+		<ScanRange>
+			<UpperRange FromAdaId="1" ToAdaId="6"/>
+			<LowerRange FromAdaId="27" ToAdaId="32"/>
+		</ScanRange>
+		<CaaSVersion>1.0.0.43</CaaSVersion>
+		<iTeroVersion>2.18.1.11</iTeroVersion>
+		<ExportScheme>exocad with color (2017 and later)</ExportScheme>
+		<ToothShadeSystem>VITA Lumin</ToothShadeSystem>
+		<Teeth>
+			<Tooth AdaId="31" RestorationType="2" Ditch="0" BridgeID="1" TypeInBridge="1" ToothMaterial="60" MarginDesignInt="" MarginDesignExt="" IncisalShade="" MiddleShade="A3" GingivalShade="" DieShade="" PreparationDesignBuccal="" PreparationDesignLingual=""/>
+			<Tooth AdaId="30" RestorationType="10" Ditch="0" BridgeID="1" TypeInBridge="4" ToothMaterial="60" MarginDesignInt="" MarginDesignExt="" IncisalShade="" MiddleShade="A3" GingivalShade="" DieShade="" PreparationDesignBuccal="" PreparationDesignLingual=""/>
+			<Tooth AdaId="29" RestorationType="10" Ditch="0" BridgeID="1" TypeInBridge="4" ToothMaterial="60" MarginDesignInt="" MarginDesignExt="" IncisalShade="" MiddleShade="A3" GingivalShade="" DieShade="" PreparationDesignBuccal="" PreparationDesignLingual=""/>
+			<Tooth AdaId="28" RestorationType="2" Ditch="0" BridgeID="1" TypeInBridge="1" ToothMaterial="60" MarginDesignInt="" MarginDesignExt="" IncisalShade="" MiddleShade="A3" GingivalShade="" DieShade="" PreparationDesignBuccal="" PreparationDesignLingual=""/>
+		</Teeth>
+		<TeethBuccalTransforms/>
+		<Bridges>
+			<Bridge Id="1" Type="1" FromAdaId="28" ToAdaId="31"/>
+		</Bridges>
+		<Notes/>
+		<Local_iDE ProductionCenterID="-1"/>
+		<iDE_Order ProductionCenterID="0" CADCAMSystemTypeID="-1" SelectedProductionCenterName="" SelectedCadcamSystemName=""/>
+		<CA_Order ProductionCenterID="0" SelectedProductionCenterName=""/>
+	</RxInfo>
+	<RxDefines>
+		<RestorationTypes>
+			<Type Id="1" Name="Regular"/>
+			<Type Id="2" Name="Crown"/>
+			<Type Id="3" Name="3/4 Crown"/>
+			<Type Id="4" Name="Implant Abutment"/>
+			<Type Id="5" Name="Inlay"/>
+			<Type Id="6" Name="Onlay"/>
+			<Type Id="7" Name="Veneer"/>
+			<Type Id="8" Name="Detachable"/>
+			<Type Id="9" Name="Missing (edentulous space)"/>
+			<Type Id="10" Name="Missing (no space)"/>
+			<Type Id="11" Name="Deciduous"/>
+			<Type Id="12" Name="Scan Body"/>
+			<Type Id="13" Name="CerecGuide"/>
+			<Type Id="20" Name="Bridge"/>
+			<Type Id="22" Name="EggShell"/>
+			<Type Id="23" Name="MockupTooth"/>
+		</RestorationTypes>
+		<BridgeTypes>
+			<Type Id="1" Name="Traditional"/>
+			<Type Id="2" Name="Cantilever"/>
+			<Type Id="3" Name="Maryland"/>
+		</BridgeTypes>
+		<ToothInBridgeTypes>
+			<Type Id="-1" Name="N/R"/>
+			<Type Id="1" Name="Abutment"/>
+			<Type Id="2" Name="Intermediate Abutment"/>
+			<Type Id="3" Name="Maryland Abutment"/>
+			<Type Id="4" Name="Pontic"/>
+			<Type Id="5" Name="Skipped"/>
+			<Type Id="16" Name="EggShell"/>
+			<Type Id="17" Name="MockupTooth"/>
+		</ToothInBridgeTypes>
+		<Materials>
+			<Material Id="-1" Name=""/>
+			<Material Id="0" Name=""/>
+			<Material Id="1" Name="PFM: High Noble Yellow"/>
+			<Material Id="2" Name="PFM: High Noble Yellow"/>
+			<Material Id="3" Name="PFM: High Noble White"/>
+			<Material Id="4" Name="PFM: High Noble Yellow"/>
+			<Material Id="5" Name="PFM: Semi-Precious"/>
+			<Material Id="6" Name="PFM: Semi-Precious"/>
+			<Material Id="7" Name="PFM: High Noble White"/>
+			<Material Id="8" Name="Obsolete not in use"/>
+			<Material Id="9" Name="Pressable Ceramics: Lab Preference"/>
+			<Material Id="10" Name="PFM: 98% Gold (Captek)"/>
+			<Material Id="11" Name="Procera"/>
+			<Material Id="12" Name="Zirconia: Lab Preference"/>
+			<Material Id="13" Name="Wol-Ceram"/>
+			<Material Id="14" Name="PFM: Base Metal"/>
+			<Material Id="15" Name="Full Gold Yellow"/>
+			<Material Id="16" Name="Alumina: Lab Preference"/>
+			<Material Id="17" Name="Composite: Lab Preference"/>
+			<Material Id="18" Name="Zirconia: Procera"/>
+			<Material Id="19" Name="Zirconia: LAVA"/>
+			<Material Id="20" Name="Zirconia: Prismatic"/>
+			<Material Id="21" Name="Zirconia: Zeno"/>
+			<Material Id="22" Name="Zirconia: Everest"/>
+			<Material Id="23" Name="Zirconia: Cercon"/>
+			<Material Id="24" Name="Zirconia: Straumann zerion LT"/>
+			<Material Id="25" Name="Straumann IPS e.max CAD"/>
+			<Material Id="26" Name="Ivoclar IPS e.max"/>
+			<Material Id="27" Name="Straumann Polycon ae"/>
+			<Material Id="28" Name="Straumann Polycon cast"/>
+			<Material Id="29" Name="Straumann Polyamide"/>
+			<Material Id="30" Name="Full Gold White"/>
+			<Material Id="31" Name="Metal: Semi-Precious"/>
+			<Material Id="32" Name="Metal: Non-Precious"/>
+			<Material Id="33" Name="Straumann ticon"/>
+			<Material Id="34" Name="Straumann Coron"/>
+			<Material Id="35" Name="Ivoclar IPS e.max CAD"/>
+			<Material Id="36" Name="Zirconia: BruxZir"/>
+			<Material Id="37" Name="Straumann VITA Mark II"/>
+			<Material Id="38" Name="Straumann VITA TriLuxe"/>
+			<Material Id="39" Name="Straumann IPS Empress CAD LT"/>
+			<Material Id="40" Name="Straumann IPS Empress CAD HT"/>
+			<Material Id="41" Name="Straumann IPS Empress CAD Multi"/>
+			<Material Id="42" Name="Straumann 3M ESPE Lava Ultimate LT"/>
+			<Material Id="43" Name="Straumann 3M ESPE Lava Ultimate HT"/>
+			<Material Id="44" Name="Full Gold Yellow Semi Precious"/>
+			<Material Id="45" Name="Straumann IPS e.max CAD HT"/>
+			<Material Id="46" Name="Straumann IPS e.max CAD LT"/>
+			<Material Id="47" Name="Straumann IPS e.max CAD MO"/>
+			<Material Id="48" Name="Zirconia: Straumann zerion HT"/>
+			<Material Id="50" Name="Zirconia"/>
+			<Material Id="51" Name="Ti"/>
+			<Material Id="52" Name="TiN"/>
+			<Material Id="60" Name="Ceramic: Full Contour Zirconia"/>
+			<Material Id="61" Name="Ceramic: Porcelain Fused Zirconia"/>
+			<Material Id="62" Name="Ceramic: Lab Preference"/>
+			<Material Id="63" Name="Ceramic: Lithium Disilicate Pressed (e.g. e.max)"/>
+			<Material Id="64" Name="Ceramic: Lithium Disilicate Milled (e.g. e.max)"/>
+			<Material Id="65" Name="Ceramic: Lithium Silicate Pressed"/>
+			<Material Id="66" Name="Ceramic: Lithium Silicate Milled"/>
+			<Material Id="67" Name="Ceramic: Alumina"/>
+			<Material Id="68" Name="Metal/PFM: Full Contour Gold"/>
+			<Material Id="69" Name="Metal/PFM: High Noble"/>
+			<Material Id="70" Name="Metal/PFM: Semi Precious"/>
+			<Material Id="71" Name="Metal/PFM: Non Precious"/>
+			<Material Id="72" Name="Resin/Composite: PMMA Poly(Methyl Methacrylate)"/>
+			<Material Id="73" Name="Resin/Composite: High Performance Polymers (HPP)"/>
+			<Material Id="74" Name="Resin/Composite: Lab Preference"/>
+			<Material Id="75" Name="Titanium"/>
+			<Material Id="76" Name="Titanium Oxide"/>
+			<Material Id="77" Name="Zirconia"/>
+			<Material Id="78" Name="Lab Preference"/>
+			<Material Id="79" Name="BruxZir NOW"/>
+			<Material Id="80" Name="Obsidian"/>
+			<Material Id="81" Name="CAMouflage NOW"/>
+			<Material Id="82" Name="BioTemps NOW"/>
+			<Material Id="1000" Name="Ti Base + Lithium Disilicate (e.g. e.max)"/>
+			<Material Id="1001" Name="Ti Base + Zirconia"/>
+			<Material Id="1002" Name="Ceramic: Full contour Translucent Zirconia"/>
+			<Material Id="1003" Name="IPS e.max® CAD"/>
+			<Material Id="1004" Name="BruxZir Esthetic NOW"/>
+			<Material Id="2000" Name="Lithium Disilicate"/>
+			<Material Id="2001" Name="Lithium Silicate"/>
+			<Material Id="2002" Name="Feldspathic Ceramic"/>
+			<Material Id="2003" Name="Glass Ceramic"/>
+			<Material Id="2004" Name="Hybrid Ceramic"/>
+			<Material Id="2005" Name="Composite"/>
+			<Material Id="2006" Name="Acrylic/PMMA"/>
+			<Material Id="2007" Name="Zirconia"/>
+			<Material Id="2008" Name="Zirconia Multilayer"/>
+			<Material Id="2009" Name="Ceramic: Zirconia"/>
+			<Material Id="2010" Name="Ceramic: Translucent Zirconia"/>
+			<Material Id="2011" Name="Ceramic: Multilayer Zirconia"/>
+			<Material Id="2012" Name="Ceramic: Lithium Disilicate"/>
+			<Material Id="2013" Name="Ceramic: Lithium Silicate"/>
+			<Material Id="2014" Name="Ceramic: Glass Ceramic"/>
+			<Material Id="2015" Name="Ceramic: Feldspathic Ceramic"/>
+			<Material Id="2016" Name="Ceramic: Hybrid"/>
+			<Material Id="2017" Name="Ceramic: Lab Preference"/>
+			<Material Id="2018" Name="Metal: High Noble"/>
+			<Material Id="2019" Name="Metal: Semi-Precious"/>
+			<Material Id="2020" Name="Metal: Titanium"/>
+			<Material Id="2021" Name="Metal: Cobalt Chrome"/>
+			<Material Id="2022" Name="Resin: Acrylic / PMMA"/>
+			<Material Id="2023" Name="Polymer: PEEK"/>
+			<Material Id="2024" Name="Composite"/>
+			<Material Id="2025" Name="Other (check note)"/>
+			<Material Id="2026" Name="Other: Wax"/>
+		</Materials>
+	</RxDefines>
+	<ExportedObjects>
+		<Object ObjectType="Surface" SubType="Jaw" JawId="Lower" FileName="lower_jaw_with_ditch_#259918722.ply"/>
+		<Object ObjectType="Surface" SubType="PreTreatment_Jaw" FileName="lower_jaw_pretreatment_#259918722.ply"/>
+		<Object ObjectType="Surface" SubType="Jaw" JawId="Upper" FileName="upper_jaw_with_ditch_#259918722.ply"/>
+	</ExportedObjects>
+	<ActualUsedTransforms>
+		<Transformation>1.000000 0.000000 0.000000 3.194366 0.000000 1.000000 0.000000 0.883174 0.000000 0.000000 1.000000 5.473001 0.000000 0.000000 0.000000 1.000000</Transformation>
+	</ActualUsedTransforms>
+</iTeroExport>

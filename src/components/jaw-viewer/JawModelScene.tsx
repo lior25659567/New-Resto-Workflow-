@@ -1,7 +1,10 @@
-import { OrbitControls, Environment } from '@react-three/drei';
+import { Suspense, useState } from 'react';
+import { Environment } from '@react-three/drei';
 import * as THREE from 'three';
 import JawMesh from './JawMesh';
-import { jawModels } from './jawModelPaths';
+import JawControls from './JawControls';
+import OcclusogramHeatmapOverlay from './OcclusogramHeatmapOverlay';
+import { jawModels, jawTextures } from './jawModelPaths';
 import hdrUrl from '@/assets/lebombo_1k.hdr?url';
 
 interface LayerState {
@@ -23,6 +26,10 @@ interface JawModelSceneProps {
   isTrimActive: boolean;
   trimSelectedLayer: 'pre-treatment' | 'treatment';
   monochrome?: boolean;
+  isOcclusogramActive?: boolean;
+  bothUpperPos?: [number, number, number];
+  bothLowerPos?: [number, number, number];
+  singleUpperPos?: [number, number, number];
 }
 
 const SCALE = 0.055;
@@ -30,8 +37,9 @@ const SCALE = 0.055;
 const UPPER_ROT: [number, number, number] = [0.1, -0.4, 0];
 const LOWER_ROT: [number, number, number] = [0, -0.4, 0];
 
-const BOTH_UPPER_POS: [number, number, number] = [0, 1.0, 0];
-const BOTH_LOWER_POS: [number, number, number] = [0, -0.5, 0];
+export const DEFAULT_BOTH_UPPER_POS: [number, number, number] = [-0.35, -0.10, 0.75];
+export const DEFAULT_BOTH_LOWER_POS: [number, number, number] = [0.25, 0.00, -0.40];
+const SINGLE_POS: [number, number, number] = [0, 0, 0];
 
 export default function JawModelScene({
   selectedView,
@@ -41,11 +49,14 @@ export default function JawModelScene({
   isTrimActive,
   trimSelectedLayer,
   monochrome = false,
+  isOcclusogramActive = false,
+  bothUpperPos = DEFAULT_BOTH_UPPER_POS,
+  bothLowerPos = DEFAULT_BOTH_LOWER_POS,
+  singleUpperPos = SINGLE_POS,
 }: JawModelSceneProps) {
-  const isBoth = selectedView === 2;
-  const showBiteModel = isBoth;
-  const showUpper = selectedView === 0;
-  const showLower = selectedView === 1;
+  const isBoth   = selectedView === 2;
+  const showUpper = selectedView === 0 || isBoth;
+  const showLower = selectedView === 1 || isBoth;
 
   function getLayerProps(layer: 'pretreatment' | 'treatment', jaw: 'upper' | 'lower') {
     const state = layerStates[layer];
@@ -54,13 +65,15 @@ export default function JawModelScene({
     const sliderOpacity = (jaw === 'upper' ? state.upper : state.lower) / 100;
     if (!isVisible) return { opacity: 0, visible: false };
     if (isToolActive && !isPrepQCActive && !isTrimActive) {
-      if (layer === 'treatment') return { opacity: 1, visible: true };
-      return { opacity: 0, visible: false };
+      return layer === 'treatment'
+        ? { opacity: 1, visible: true }
+        : { opacity: 0, visible: false };
     }
     if (isTrimActive) {
       const trimLayer = trimSelectedLayer === 'pre-treatment' ? 'pretreatment' : 'treatment';
-      if (layer === trimLayer) return { opacity: 1, visible: true };
-      return { opacity: 0, visible: false };
+      return layer === trimLayer
+        ? { opacity: 1, visible: true }
+        : { opacity: 0, visible: false };
     }
     return { opacity: sliderOpacity, visible: sliderOpacity > 0 };
   }
@@ -69,6 +82,17 @@ export default function JawModelScene({
   const uTrt = getLayerProps('treatment', 'upper');
   const lPre = getLayerProps('pretreatment', 'lower');
   const lTrt = getLayerProps('treatment', 'lower');
+
+  // Combine view visibility with layer visibility — keeps all components mounted for instant switching
+  const uTrtVisible = showUpper && uTrt.visible;
+  const uPreVisible = showUpper && uPre.visible;
+  const lTrtVisible = showLower && lTrt.visible;
+  const lPreVisible = showLower && lPre.visible;
+
+  const upperPos = isBoth ? bothUpperPos : singleUpperPos;
+  const lowerPos = isBoth ? bothLowerPos : SINGLE_POS;
+
+  const [modelGroup, setModelGroup] = useState<THREE.Group | null>(null);
 
   return (
     <>
@@ -81,40 +105,28 @@ export default function JawModelScene({
       <pointLight position={[3, 0, 3]} intensity={0.15} color="#e6f0ff" />
       <Environment files={hdrUrl} background={false} />
 
-      {showUpper && (
-        <group position={[0, 0, 0]}>
-          <JawMesh url={jawModels.upper_treatment} opacity={uTrt.opacity} visible={uTrt.visible} rotation={UPPER_ROT} scale={SCALE} monochrome={monochrome} />
-          <JawMesh url={jawModels.upper_pretreatment} opacity={uPre.opacity} visible={uPre.visible} rotation={UPPER_ROT} scale={SCALE} monochrome={monochrome} />
+      {/* Wrapping group lets the optional transform gizmo attach to the whole jaw assembly */}
+      <group ref={setModelGroup}>
+        {/* Upper jaw — always mounted; position shifts for both-view */}
+        <group position={upperPos}>
+          <JawMesh url={jawModels.upper_treatment}    textureUrl={jawTextures.upper_treatment}    opacity={uTrt.opacity} visible={uTrtVisible} rotation={UPPER_ROT} scale={SCALE} monochrome={monochrome} />
+          <JawMesh url={jawModels.upper_pretreatment} textureUrl={jawTextures.upper_pretreatment} opacity={uPre.opacity} visible={uPreVisible} rotation={UPPER_ROT} scale={SCALE} monochrome={monochrome} />
+          <Suspense fallback={null}>
+            <OcclusogramHeatmapOverlay url={jawModels.upper_treatment} textureUrl={jawTextures.upper_treatment} jawType="upper" rotation={UPPER_ROT} scale={SCALE} active={isOcclusogramActive && showUpper} />
+          </Suspense>
         </group>
-      )}
 
-      {showLower && (
-        <group position={[0, 0, 0]}>
-          <JawMesh url={jawModels.lower_treatment} opacity={lTrt.opacity} visible={lTrt.visible} rotation={LOWER_ROT} scale={SCALE} monochrome={monochrome} />
-          <JawMesh url={jawModels.lower_pretreatment} opacity={lPre.opacity} visible={lPre.visible} rotation={LOWER_ROT} scale={SCALE} monochrome={monochrome} />
+        {/* Lower jaw — always mounted; position shifts for both-view */}
+        <group position={lowerPos}>
+          <JawMesh url={jawModels.lower_treatment}    textureUrl={jawTextures.lower_treatment}    opacity={lTrt.opacity} visible={lTrtVisible} rotation={LOWER_ROT} scale={SCALE} monochrome={monochrome} />
+          <JawMesh url={jawModels.lower_pretreatment} textureUrl={jawTextures.lower_pretreatment} opacity={lPre.opacity} visible={lPreVisible} rotation={LOWER_ROT} scale={SCALE} monochrome={monochrome} />
+          <Suspense fallback={null}>
+            <OcclusogramHeatmapOverlay url={jawModels.lower_treatment} textureUrl={jawTextures.lower_treatment} jawType="lower" rotation={LOWER_ROT} scale={SCALE} active={isOcclusogramActive && showLower} />
+          </Suspense>
         </group>
-      )}
+      </group>
 
-      {showBiteModel && (
-        <group position={[0, 0, 0]}>
-          <JawMesh url={jawModels.bite} opacity={1} visible={true} rotation={UPPER_ROT} scale={SCALE} monochrome={monochrome} />
-        </group>
-      )}
-
-      <OrbitControls
-        enablePan
-        enableZoom
-        enableRotate
-        mouseButtons={{ LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN }}
-        rotateSpeed={1.5}
-        zoomSpeed={1.2}
-        panSpeed={0.8}
-        enableDamping
-        dampingFactor={0.08}
-        minDistance={0.5}
-        maxDistance={15}
-        makeDefault
-      />
+      <JawControls gizmoTarget={modelGroup} autoFit={false} />
     </>
   );
 }

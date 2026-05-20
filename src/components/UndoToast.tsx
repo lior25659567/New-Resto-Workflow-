@@ -6,9 +6,9 @@ interface UndoToastProps {
   visible: boolean;
 }
 
-interface UndoAcceptBadgeProps {
+interface UndoApplyBadgeProps {
   hasHistory: boolean;
-  onAccept: () => void;
+  onApply: () => void;
 }
 
 function CheckIcon() {
@@ -40,8 +40,8 @@ export function UndoToast({ message, visible }: UndoToastProps) {
   );
 }
 
-/** Persistent Accept badge — always visible while undo history is non-empty. */
-export function UndoAcceptBadge({ hasHistory, onAccept }: UndoAcceptBadgeProps) {
+/** Persistent Apply badge — always visible while undo history is non-empty. */
+export function UndoApplyBadge({ hasHistory, onApply }: UndoApplyBadgeProps) {
   return (
     <AnimatePresence>
       {hasHistory && (
@@ -50,12 +50,12 @@ export function UndoAcceptBadge({ hasHistory, onAccept }: UndoAcceptBadgeProps) 
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.9 }}
           transition={{ duration: 0.2, ease: [0, 0, 0.2, 1] }}
-          onClick={onAccept}
+          onClick={onApply}
           className="flex items-center gap-1.5 px-4 py-2 rounded-[20px] bg-[#009ACE] text-white text-[13px] font-medium shadow-md hover:bg-[#007aaa] active:bg-[#006590] active:scale-95 transition-all"
           style={{ fontFamily: 'Roboto, sans-serif' }}
         >
           <CheckIcon />
-          Accept changes
+          Apply changes
         </motion.button>
       )}
     </AnimatePresence>

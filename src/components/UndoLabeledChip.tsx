@@ -96,7 +96,7 @@ export default function UndoLabeledChip({
           </span>
         </button>
 
-        {/* Accept */}
+        {/* Apply */}
         <button
           onClick={hasHistory ? onAccept : undefined}
           disabled={!hasHistory}
@@ -110,7 +110,7 @@ export default function UndoLabeledChip({
               color: hasHistory ? "#3E3D40" : "#B0B1B3",
             }}
           >
-            Accept
+            Apply
           </span>
         </button>
       </div>

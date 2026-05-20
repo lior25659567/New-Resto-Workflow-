@@ -1,6 +1,6 @@
 import React, { useRef, useMemo, useEffect, createContext, useContext } from 'react';
 import { useLoader, useFrame } from '@react-three/fiber';
-import { OrbitControls, Environment } from '@react-three/drei';
+import { TrackballControls, Environment } from '@react-three/drei';
 import { PLYLoader } from 'three-stdlib';
 import * as THREE from 'three';
 import hdrUrl from '@/assets/lebombo_1k.hdr?url';
@@ -74,7 +74,6 @@ export default function CopilotScene({ children }: CopilotSceneProps) {
   const rawGeo = useLoader(PLYLoader, lowerJawUrl);
   const geometry = usePreparedGeometry(rawGeo);
   const bounds = useMemo(() => computeBounds(geometry), [geometry]);
-  const controlsRef = useRef<React.ComponentRef<typeof OrbitControls>>(null);
 
   const modelCtx = useMemo(() => ({ bounds, geometry }), [bounds, geometry]);
 

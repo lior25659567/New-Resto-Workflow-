@@ -52,7 +52,7 @@ function AcceptButton({ onClick, disabled }: { onClick: () => void; disabled: bo
         fontFamily: 'Roboto, sans-serif',
       }}
     >
-      Accept
+      Apply
     </button>
   );
 }
@@ -91,7 +91,7 @@ export default function UndoCompactBar({
         </button>
       </div>
 
-      {/* Body: undo/redo icons + accept */}
+      {/* Body: undo/redo icons + apply */}
       <div className="bg-white flex items-center rounded-b-[8px]">
         {/* Undo/Redo icon buttons */}
         <div className="flex items-center">
@@ -111,7 +111,7 @@ export default function UndoCompactBar({
           </button>
         </div>
 
-        {/* Divider + Accept */}
+        {/* Divider + Apply */}
         <div className="border-l border-[#e0e0e0] p-2 rounded-br-[8px] w-[140px]">
           <AcceptButton onClick={onAccept} disabled={!canUndo && !canRedo} />
         </div>

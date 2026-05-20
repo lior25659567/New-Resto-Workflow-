@@ -1,0 +1,105 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<iTeroExport Version="5.0">
+  <RxInfo>
+    <OrderID>259918722</OrderID>
+    <OrderCode>092ERXXX</OrderCode>
+    <Modeled>False</Modeled>
+    <FilePath />
+    <ExportTime>10/26/2025 10:22:48</ExportTime>
+    <UtcOffset>0</UtcOffset>
+    <LabTechnician />
+    <Patient>###########, ###########</Patient>
+    <UniquePatientIdentifier>00000000-0000-0000-0000-000000000000</UniquePatientIdentifier>
+    <ChartNumber />
+    <Doctor>Soto Molero, Karla</Doctor>
+    <DoctorLicense>1111</DoctorLicense>
+    <DoctorID>1381546</DoctorID>
+    <LabName />
+    <LabID />
+    <PracticeShipToAddress>9882 Glades Road Boca Raton Florida United States 33434-3917</PracticeShipToAddress>
+    <DueDate>10/01/2025</DueDate>
+    <ScanRange>
+      <UpperRange FromAdaId="1" ToAdaId="6" />
+      <LowerRange FromAdaId="27" ToAdaId="32" />
+    </ScanRange>
+    <CaaSVersion>1.0.0.43</CaaSVersion>
+    <iTeroVersion>2.18.1.11</iTeroVersion>
+    <ExportScheme>exocad with color (2017 and later)</ExportScheme>
+    <ToothShadeSystem>VITA Lumin</ToothShadeSystem>
+    <Procedure>4</Procedure>
+    <ProcedureType>0</ProcedureType>
+    <Teeth>
+      <Tooth AdaId="31" RestorationType="2" Specification="1" ImplantBasedRestorationType="-1" AbutmentType="-1" PonticDesign="-1" Ditch="0" BridgeID="1" TypeInBridge="1" ToothMaterial="2009" MarginDesignInt="" MarginDesignExt="" IncisalShade="" MiddleShade="A3" GingivalShade="" DieShade="" PreparationDesignBuccal="" PreparationDesignLingual="" AbutmentMaterial="-1" />
+      <Tooth AdaId="30" RestorationType="21" Specification="1" ImplantBasedRestorationType="-1" AbutmentType="-1" PonticDesign="-1" Ditch="0" BridgeID="1" TypeInBridge="4" ToothMaterial="2009" MarginDesignInt="" MarginDesignExt="" IncisalShade="" MiddleShade="A3" GingivalShade="" DieShade="" PreparationDesignBuccal="" PreparationDesignLingual="" AbutmentMaterial="-1" />
+      <Tooth AdaId="29" RestorationType="21" Specification="1" ImplantBasedRestorationType="-1" AbutmentType="-1" PonticDesign="-1" Ditch="0" BridgeID="1" TypeInBridge="4" ToothMaterial="2009" MarginDesignInt="" MarginDesignExt="" IncisalShade="" MiddleShade="A3" GingivalShade="" DieShade="" PreparationDesignBuccal="" PreparationDesignLingual="" AbutmentMaterial="-1" />
+      <Tooth AdaId="28" RestorationType="2" Specification="1" ImplantBasedRestorationType="-1" AbutmentType="-1" PonticDesign="-1" Ditch="0" BridgeID="1" TypeInBridge="1" ToothMaterial="2009" MarginDesignInt="" MarginDesignExt="" IncisalShade="" MiddleShade="A3" GingivalShade="" DieShade="" PreparationDesignBuccal="" PreparationDesignLingual="" AbutmentMaterial="-1" />
+    </Teeth>
+    <Denture>
+      <DentureShadeSystem>-1</DentureShadeSystem>
+      <DentureTeethShade />
+      <DentureGingivalShade />
+      <DentureMould />
+      <DentureStage />
+      <UpperJaw>False</UpperJaw>
+      <LowerJaw>False</LowerJaw>
+      <DentureCopyScan>False</DentureCopyScan>
+    </Denture>
+    <TreatmentStage>0</TreatmentStage>
+    <TeethBuccalTransforms />
+    <Bridges>
+      <Bridge Id="1" Type="1" FromAdaId="28" ToAdaId="31" />
+    </Bridges>
+    <Notes />
+    <Local_iDE ProductionCenterID="-1" />
+    <iDE_Order ProductionCenterID="0" CADCAMSystemTypeID="-1" SelectedProductionCenterName="" SelectedCadcamSystemName="" />
+    <CA_Order ProductionCenterID="0" SelectedProductionCenterName="" />
+    <DoctorCompanyID>262507</DoctorCompanyID>
+</RxInfo>
+  <RxDefines>
+    <RestorationTypes>
+      <Type Id="2" Name="Crown" />
+      <Type Id="21" Name="Missing" />
+    </RestorationTypes>
+    <Procedure>
+      <Type Id="4" Name="Fixed Restorative" />
+    </Procedure>
+    <ProcedureType />
+    <Specification>
+      <Type Id="1" Name="Full Contour" />
+    </Specification>
+    <ImplantBasedRestoration />
+    <AbutmentType />
+    <PonticDesign />
+    <DentureShadeSystem>
+      <Type Id="-1" Name="Other" />
+    </DentureShadeSystem>
+    <DentureGingivalShade />
+    <DentureMould />
+    <DentureStage />
+    <TreatmentStage />
+    <BridgeTypes>
+      <Type Id="1" Name="Traditional" />
+    </BridgeTypes>
+    <ToothInBridgeTypes>
+      <Type Id="1" Name="Abutment" />
+      <Type Id="4" Name="Pontic" />
+    </ToothInBridgeTypes>
+    <Materials>
+      <Type Id="2009" Name="Ceramic: Zirconia" />
+    </Materials>
+    <ImplantTypes />
+  </RxDefines>
+  <ExportedObjects>
+    <Object ObjectType="Surface" SubType="Jaw" JawId="Lower" FileName="lower_jaw_with_ditch_#259918722.ply" />
+    <Object ObjectType="Texture" SubType="Jaw" JawId="Lower" FileName="lower_jaw_with_ditch_#259918722_texture.jpg" />
+    <Object ObjectType="Surface" SubType="PreTreatment_Jaw" JawId="Lower" FileName="lower_jaw_pretreatment_#259918722.ply" />
+    <Object ObjectType="Texture" SubType="PreTreatment_Jaw" JawId="Lower" FileName="lower_jaw_pretreatment_#259918722_texture.jpg" />
+    <Object ObjectType="Surface" SubType="Jaw" JawId="Upper" FileName="upper_jaw_with_ditch_#259918722.ply" />
+    <Object ObjectType="Texture" SubType="Jaw" JawId="Upper" FileName="upper_jaw_with_ditch_#259918722_texture.jpg" />
+    <Object ObjectType="iTero_Rx" SubType="PDF" FileName="iTero_Rx_259918722.pdf" />
+</ExportedObjects>
+  <ActualUsedTransforms>
+    <Transformation>1.000000 0.000000 0.000000 3.194366 0.000000 1.000000 0.000000 0.883174 0.000000 0.000000 1.000000 5.473001 0.000000 0.000000 0.000000 1.000000</Transformation>
+  </ActualUsedTransforms>
+  <ScanBodyRecognitionData />
+</iTeroExport>

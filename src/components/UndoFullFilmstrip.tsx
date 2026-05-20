@@ -153,7 +153,7 @@ export default function UndoFullFilmstrip({ past, future, currentJaw, canUndo, c
         </div>
       </div>
 
-      {/* Footer — undo/redo + accept */}
+      {/* Footer — undo/redo + apply */}
       <div className="bg-white border-t border-[#e8e8e8] px-3 py-2 flex items-center gap-4 shrink-0">
         <div className="flex items-center gap-2">
           <button
@@ -181,7 +181,7 @@ export default function UndoFullFilmstrip({ past, future, currentJaw, canUndo, c
           }`}
           style={{ fontFamily: 'Roboto, sans-serif' }}
         >
-          Accept
+          Apply
         </button>
       </div>
     </motion.div>

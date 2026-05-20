@@ -3,7 +3,7 @@ import React, {
   useCallback, useEffect, useLayoutEffect,
 } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls, Center, Environment } from '@react-three/drei';
+import { TrackballControls, Center, Environment } from '@react-three/drei';
 import * as THREE from 'three';
 import upperJawModel from '@/assets/3d-models/Upper Jaw .ply?url';
 import lowerJawModel from '@/assets/3d-models/Lower Jaw.ply?url';
@@ -362,25 +362,14 @@ function Scene({ onGuidanceUpdate, onReset, guidanceMode, lockModel, isScanningR
 
       {/* ScanningBoundary removed — scanning happens from the guidance element itself */}
 
-      <OrbitControls
-        enablePan={true}
-        enableZoom={true}
-        enableRotate={true}
-        mouseButtons={{
-          LEFT: THREE.MOUSE.ROTATE,
-          MIDDLE: THREE.MOUSE.DOLLY,
-          RIGHT: THREE.MOUSE.PAN,
-        }}
-        rotateSpeed={1.5}
+      <TrackballControls
+        rotateSpeed={3.0}
         zoomSpeed={1.2}
-        panSpeed={0.8}
-        enableDamping={true}
-        dampingFactor={0.08}
+        panSpeed={0.5}
+        staticMoving={false}
+        dynamicDampingFactor={0.12}
         minDistance={0.5}
         maxDistance={10}
-        minPolarAngle={0.1}
-        maxPolarAngle={Math.PI - 0.1}
-        target={[0, 0, 0]}
         makeDefault
       />
     </>

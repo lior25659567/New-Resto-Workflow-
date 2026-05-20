@@ -7,7 +7,7 @@ import ScanProgressBar from "../imports/ScanProgressBar";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Canvas } from "@react-three/fiber";
 import * as THREE from "three";
-import JawModelScene from "../components/jaw-viewer/JawModelScene";
+import JawModelScene, { DEFAULT_BOTH_UPPER_POS, DEFAULT_BOTH_LOWER_POS } from "../components/jaw-viewer/JawModelScene";
 
 interface ScannedLayer {
   id: string;
@@ -100,6 +100,8 @@ export default function MultiLayerView({ patient, onBack, onHome, onNavigateToMu
   
   // Track active tool from toolbar (1=Review, 2=Occlusogram, 3=Margin Line, 4=Prep QC, 5=Trim)
   const [activeTool, setActiveTool] = useState<number | null>(null);
+  // Monochrome is independent of the active tool — can stack with occlusogram or be solo
+  const [isMonochromeActive, setIsMonochromeActive] = useState(false);
   
   // When a tool is active, only show treatment scan (hide pre-treatment and additional)
   const isToolActive = activeTool !== null;
@@ -133,24 +135,34 @@ export default function MultiLayerView({ patient, onBack, onHome, onNavigateToMu
       initialStates.pretreatment = { 
         upper: 50, 
         lower: 50, 
-        upperVisible: pretreatmentLayer.scannedJaws.upper ?? false, 
-        lowerVisible: pretreatmentLayer.scannedJaws.lower ?? false 
+        upperVisible: pretreatmentLayer.scannedJaws.upper ?? true, 
+        lowerVisible: pretreatmentLayer.scannedJaws.lower ?? true 
       };
     }
     if (treatmentLayer) {
       initialStates.treatment = { 
         upper: 50, 
         lower: 50, 
-        upperVisible: treatmentLayer.scannedJaws.upper ?? false, 
-        lowerVisible: treatmentLayer.scannedJaws.lower ?? false 
+        upperVisible: treatmentLayer.scannedJaws.upper ?? true, 
+        lowerVisible: treatmentLayer.scannedJaws.lower ?? true 
       };
     }
     if (additionalLayer) {
       initialStates.additional = { 
         upper: 50, 
         lower: 50, 
-        upperVisible: additionalLayer.scannedJaws.upper ?? false, 
-        lowerVisible: additionalLayer.scannedJaws.lower ?? false 
+        upperVisible: additionalLayer.scannedJaws.upper ?? true, 
+        lowerVisible: additionalLayer.scannedJaws.lower ?? true 
+      };
+    }
+    
+    // Ensure we always have at least one layer visible for testing
+    if (!initialStates.pretreatment && !initialStates.treatment && !initialStates.additional) {
+      initialStates.treatment = {
+        upper: 100,
+        lower: 100,
+        upperVisible: true,
+        lowerVisible: true
       };
     }
     
@@ -168,6 +180,32 @@ export default function MultiLayerView({ patient, onBack, onHome, onNavigateToMu
     }
   }, [isPrepQCActive]);
 
+  // Jaw position adjustment — Both view
+  const [isJawMoveMode, setIsJawMoveMode] = useState(false);
+  const [upperJawPos, setUpperJawPos] = useState<[number, number, number]>([...DEFAULT_BOTH_UPPER_POS]);
+  const [lowerJawPos, setLowerJawPos] = useState<[number, number, number]>([...DEFAULT_BOTH_LOWER_POS]);
+  // Jaw position adjustment — Single upper view
+  const [isUpperSingleMoveMode, setIsUpperSingleMoveMode] = useState(false);
+  const [upperSinglePos, setUpperSinglePos] = useState<[number, number, number]>([0, 0, 0]);
+  const jawStep = 0.05;
+  const nudgeUpper = useCallback((dx: number, dy: number, dz: number) => {
+    setUpperJawPos(([x, y, z]) => [x + dx, y + dy, z + dz]);
+  }, []);
+  const nudgeLower = useCallback((dx: number, dy: number, dz: number) => {
+    setLowerJawPos(([x, y, z]) => [x + dx, y + dy, z + dz]);
+  }, []);
+  const nudgeUpperSingle = useCallback((dx: number, dy: number, dz: number) => {
+    setUpperSinglePos(([x, y, z]) => [x + dx, y + dy, z + dz]);
+  }, []);
+  const copyJawValues = useCallback(() => {
+    const text = `Upper: [${upperJawPos.map(v => v.toFixed(2)).join(', ')}]  Lower: [${lowerJawPos.map(v => v.toFixed(2)).join(', ')}]`;
+    navigator.clipboard.writeText(text).catch(() => {});
+  }, [upperJawPos, lowerJawPos]);
+  const copyUpperSingleValues = useCallback(() => {
+    const text = `Upper single: [${upperSinglePos.map(v => v.toFixed(2)).join(', ')}]`;
+    navigator.clipboard.writeText(text).catch(() => {});
+  }, [upperSinglePos]);
+
   // Post-processing progress bar state
   const [postProcessingProgress, setPostProcessingProgress] = useState(0);
   const [isPostProcessing, setIsPostProcessing] = useState(true);
@@ -175,8 +213,8 @@ export default function MultiLayerView({ patient, onBack, onHome, onNavigateToMu
   // Simulate post-processing progress
   useEffect(() => {
     if (isPostProcessing) {
-      const duration = 3000; // 3 seconds total processing time
-      const interval = 50; // Update every 50ms
+      const duration = 200;
+      const interval = 16;
       const steps = duration / interval;
       const increment = 100 / steps;
       
@@ -185,8 +223,7 @@ export default function MultiLayerView({ patient, onBack, onHome, onNavigateToMu
           const next = prev + increment;
           if (next >= 100) {
             clearInterval(timer);
-            // Keep showing 100% for a moment before hiding
-            setTimeout(() => setIsPostProcessing(false), 500);
+            setIsPostProcessing(false);
             return 100;
           }
           return next;
@@ -205,7 +242,7 @@ export default function MultiLayerView({ patient, onBack, onHome, onNavigateToMu
 
   return (
     <div className="flex flex-col h-screen w-full" style={{ background: canvasBg }}>
-      <Header 
+      <Header
         activeSteps={{ search: true }}
         onStepToggle={(step) => {
           if (step === 'email') {
@@ -222,6 +259,7 @@ export default function MultiLayerView({ patient, onBack, onHome, onNavigateToMu
         onNavigateToSummary={onNavigateToSummary}
         canvasBg={canvasBg}
         onCanvasBgChange={onCanvasBgChange}
+        settingsOverlay
       />
 
       {/* Main content area */}
@@ -261,13 +299,125 @@ export default function MultiLayerView({ patient, onBack, onHome, onNavigateToMu
         
         {/* ToolbarView - Top Right */}
         <div className="absolute top-4 right-4 z-10">
-          <ToolbarView onActiveToolChange={setActiveTool} />
+          <ToolbarView onActiveToolChange={setActiveTool} onMonochromeChange={setIsMonochromeActive} />
         </div>
+
+        {/* Jaw Position Panel — bottom-left, single upper view */}
+        {selectedView === 0 && (
+          <div className="absolute bottom-4 left-4 z-20 flex flex-col gap-2 rounded-lg bg-white/95 p-3 shadow-md min-w-[200px]">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs font-semibold text-slate-700">Upper Jaw Position</span>
+              <button
+                type="button"
+                onClick={() => setIsUpperSingleMoveMode(v => !v)}
+                className={`rounded px-2 py-1 text-xs font-medium ${isUpperSingleMoveMode ? 'bg-[#009ACE] text-white' : 'bg-slate-200 text-slate-700'}`}
+              >
+                {isUpperSingleMoveMode ? 'ON' : 'OFF'}
+              </button>
+            </div>
+            {isUpperSingleMoveMode && (
+              <>
+                <div className="text-[11px] text-slate-600 font-mono">
+                  {`(${upperSinglePos.map(v => v.toFixed(2)).join(', ')})`}
+                </div>
+                <div className="grid grid-cols-3 gap-1">
+                  <button type="button" className="rounded bg-slate-100 px-1.5 py-1 text-xs hover:bg-slate-200" onClick={() => nudgeUpperSingle(-jawStep, 0, 0)}>X−</button>
+                  <button type="button" className="rounded bg-slate-100 px-1.5 py-1 text-xs hover:bg-slate-200" onClick={() => nudgeUpperSingle(0, 0, jawStep)}>Z+</button>
+                  <button type="button" className="rounded bg-slate-100 px-1.5 py-1 text-xs hover:bg-slate-200" onClick={() => nudgeUpperSingle(jawStep, 0, 0)}>X+</button>
+                  <button type="button" className="rounded bg-slate-100 px-1.5 py-1 text-xs hover:bg-slate-200" onClick={() => nudgeUpperSingle(0, -jawStep, 0)}>Y−</button>
+                  <button type="button" className="rounded bg-slate-100 px-1.5 py-1 text-xs hover:bg-slate-200" onClick={() => nudgeUpperSingle(0, 0, -jawStep)}>Z−</button>
+                  <button type="button" className="rounded bg-slate-100 px-1.5 py-1 text-xs hover:bg-slate-200" onClick={() => nudgeUpperSingle(0, jawStep, 0)}>Y+</button>
+                </div>
+                <div className="flex gap-1 mt-1">
+                  <button
+                    type="button"
+                    className="flex-1 rounded bg-slate-100 px-2 py-1 text-xs hover:bg-slate-200"
+                    onClick={() => setUpperSinglePos([0, 0, 0])}
+                  >
+                    Reset
+                  </button>
+                  <button
+                    type="button"
+                    className="flex-1 rounded bg-[#009ACE] text-white px-2 py-1 text-xs hover:bg-[#007aaf]"
+                    onClick={copyUpperSingleValues}
+                  >
+                    Copy Values
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Jaw Position Panel — bottom-left, only in Both view */}
+        {selectedView === 2 && (
+          <div className="absolute bottom-4 left-4 z-20 flex flex-col gap-2 rounded-lg bg-white/95 p-3 shadow-md min-w-[200px]">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs font-semibold text-slate-700">Jaw Position</span>
+              <button
+                type="button"
+                onClick={() => setIsJawMoveMode(v => !v)}
+                className={`rounded px-2 py-1 text-xs font-medium ${isJawMoveMode ? 'bg-[#009ACE] text-white' : 'bg-slate-200 text-slate-700'}`}
+              >
+                {isJawMoveMode ? 'ON' : 'OFF'}
+              </button>
+            </div>
+
+            {isJawMoveMode && (
+              <>
+                {/* Upper jaw */}
+                <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mt-1">Upper Jaw</div>
+                <div className="text-[11px] text-slate-600 font-mono">
+                  {`(${upperJawPos.map(v => v.toFixed(2)).join(', ')})`}
+                </div>
+                <div className="grid grid-cols-3 gap-1">
+                  <button type="button" className="rounded bg-slate-100 px-1.5 py-1 text-xs hover:bg-slate-200" onClick={() => nudgeUpper(-jawStep, 0, 0)}>X−</button>
+                  <button type="button" className="rounded bg-slate-100 px-1.5 py-1 text-xs hover:bg-slate-200" onClick={() => nudgeUpper(0, 0, jawStep)}>Z+</button>
+                  <button type="button" className="rounded bg-slate-100 px-1.5 py-1 text-xs hover:bg-slate-200" onClick={() => nudgeUpper(jawStep, 0, 0)}>X+</button>
+                  <button type="button" className="rounded bg-slate-100 px-1.5 py-1 text-xs hover:bg-slate-200" onClick={() => nudgeUpper(0, -jawStep, 0)}>Y−</button>
+                  <button type="button" className="rounded bg-slate-100 px-1.5 py-1 text-xs hover:bg-slate-200" onClick={() => nudgeUpper(0, 0, -jawStep)}>Z−</button>
+                  <button type="button" className="rounded bg-slate-100 px-1.5 py-1 text-xs hover:bg-slate-200" onClick={() => nudgeUpper(0, jawStep, 0)}>Y+</button>
+                </div>
+
+                {/* Lower jaw */}
+                <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mt-1">Lower Jaw</div>
+                <div className="text-[11px] text-slate-600 font-mono">
+                  {`(${lowerJawPos.map(v => v.toFixed(2)).join(', ')})`}
+                </div>
+                <div className="grid grid-cols-3 gap-1">
+                  <button type="button" className="rounded bg-slate-100 px-1.5 py-1 text-xs hover:bg-slate-200" onClick={() => nudgeLower(-jawStep, 0, 0)}>X−</button>
+                  <button type="button" className="rounded bg-slate-100 px-1.5 py-1 text-xs hover:bg-slate-200" onClick={() => nudgeLower(0, 0, jawStep)}>Z+</button>
+                  <button type="button" className="rounded bg-slate-100 px-1.5 py-1 text-xs hover:bg-slate-200" onClick={() => nudgeLower(jawStep, 0, 0)}>X+</button>
+                  <button type="button" className="rounded bg-slate-100 px-1.5 py-1 text-xs hover:bg-slate-200" onClick={() => nudgeLower(0, -jawStep, 0)}>Y−</button>
+                  <button type="button" className="rounded bg-slate-100 px-1.5 py-1 text-xs hover:bg-slate-200" onClick={() => nudgeLower(0, 0, -jawStep)}>Z−</button>
+                  <button type="button" className="rounded bg-slate-100 px-1.5 py-1 text-xs hover:bg-slate-200" onClick={() => nudgeLower(0, jawStep, 0)}>Y+</button>
+                </div>
+
+                <div className="flex gap-1 mt-1">
+                  <button
+                    type="button"
+                    className="flex-1 rounded bg-slate-100 px-2 py-1 text-xs hover:bg-slate-200"
+                    onClick={() => { setUpperJawPos([...DEFAULT_BOTH_UPPER_POS]); setLowerJawPos([...DEFAULT_BOTH_LOWER_POS]); }}
+                  >
+                    Reset
+                  </button>
+                  <button
+                    type="button"
+                    className="flex-1 rounded bg-[#009ACE] text-white px-2 py-1 text-xs hover:bg-[#007aaf]"
+                    onClick={copyJawValues}
+                  >
+                    Copy Values
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         {/* 3D Canvas — renders PLY jaw models based on view and layer states */}
         <div className="absolute inset-0">
           <Canvas
-            camera={{ position: [0, -10, 0], fov: 35, near: 0.01, far: 1000, up: [0, 1, 0] }}
+            camera={{ position: [0, 0, 14], fov: 35 }}
             gl={{
               antialias: true,
               alpha: true,
@@ -276,7 +426,7 @@ export default function MultiLayerView({ patient, onBack, onHome, onNavigateToMu
               toneMappingExposure: 1.0,
             }}
             style={{ touchAction: 'none', background: 'transparent' }}
-            dpr={[1, 2]}
+            dpr={typeof window !== 'undefined' ? window.devicePixelRatio : 1}
           >
             <Suspense fallback={null}>
               <JawModelScene
@@ -286,7 +436,11 @@ export default function MultiLayerView({ patient, onBack, onHome, onNavigateToMu
                 isPrepQCActive={isPrepQCActive}
                 isTrimActive={isTrimActive}
                 trimSelectedLayer={trimSelectedLayer}
-                monochrome={activeTool === 0}
+                monochrome={isMonochromeActive}
+                isOcclusogramActive={activeTool === 2}
+                bothUpperPos={upperJawPos}
+                bothLowerPos={lowerJawPos}
+                singleUpperPos={upperSinglePos}
               />
             </Suspense>
           </Canvas>

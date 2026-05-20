@@ -93,8 +93,8 @@ export function BiteToolbarContainer({
               <button
                 onClick={() => handleBiteClick(bite.key)}
                 className={`w-[60px] h-[60px] rounded-[10px] flex items-center justify-center transition-colors cursor-pointer ${
-                  isActive 
-                    ? 'bg-[#A6E2F9]' 
+                  isActive
+                    ? 'bg-[#dff5fc] border border-[#00adef]'
                     : 'bg-white hover:bg-gray-50'
                 }`}
                 style={{ fontFamily: "'Roboto', sans-serif" }}

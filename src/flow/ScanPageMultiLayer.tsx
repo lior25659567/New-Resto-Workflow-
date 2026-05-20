@@ -228,8 +228,10 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
   const undoPanelCloseRef = useRef<(() => void) | null>(null);
   const isRestoringRef = useRef(false);
 
-  // Visual reveal step for undo/redo 3D clipping effect (1-10, 10 = full model)
-  const [revealStep, setRevealStep] = useState(10);
+  // Visual reveal step for undo/redo 3D clipping effect (1-60, 60 = full model)
+  const [revealStep, setRevealStep] = useState(60);
+  // Keeps the accepted undo preview visible after the panel closes
+  const [hasAppliedUndoState, setHasAppliedUndoState] = useState(false);
 
   // Undo history
   const undoHistory = useUndoHistory();
@@ -276,6 +278,7 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
     setCurrentJaw(null);
     setTabJawStates({});
     setGuidanceResetCounter(c => c + 1);
+    setHasAppliedUndoState(false);
     undoHistory.reset();
   }, [workflow]);
 
@@ -524,6 +527,7 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
     // For bite/both view: scan directly like upper/lower
     if (currentJaw === 'bite') {
       if (!jawState.bite) {
+        setHasAppliedUndoState(false);
         setIsScanning(true);
         setScanProgress(0);
       }
@@ -533,6 +537,7 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
     // For upper/lower jaw
     // Left lateral allows re-scanning
     if (isLeftLateralActive && activeTab.type === 'pre-treatment') {
+      setHasAppliedUndoState(false);
       setIsScanning(true);
       setScanProgress(0);
       return;
@@ -540,6 +545,7 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
     
     // Start scanning if this jaw hasn't been scanned yet for this tab
     if (!jawState[currentJaw]) {
+      setHasAppliedUndoState(false);
       setIsScanning(true);
       setScanProgress(0);
     }
@@ -731,16 +737,20 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
     requestAnimationFrame(() => { isRestoringRef.current = false; });
   };
 
-  const TOTAL_REVEAL_STEPS = 10;
+  const TOTAL_REVEAL_STEPS = 60;
 
   // Unified handler for undo tool actions
   const handleUndoAction = (action: "undo" | "redo" | "accept") => {
     if (action === "undo") {
+      setHasAppliedUndoState(false);
       setRevealStep(prev => Math.max(1, prev - 1));
     } else if (action === "redo") {
+      setHasAppliedUndoState(false);
       setRevealStep(prev => Math.min(TOTAL_REVEAL_STEPS, prev + 1));
     } else if (action === "accept") {
       // Keep the current reveal step — model stays at whatever state user accepted
+      setHasAppliedUndoState(true);
+      setCurrentJaw((prev) => prev ?? 'upper');
       undoPanelCloseRef.current?.();
     }
   };
@@ -938,7 +948,7 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
         )}
       </div>
 
-      <Header 
+      <Header
         activeSteps={{ stepIcon: true }}
         onStepToggle={(step) => {
           if (step === 'search') {
@@ -955,6 +965,7 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
         onNavigateToSummary={onNavigateToSummary}
         canvasBg={canvasBg}
         onCanvasBgChange={onCanvasBgChange}
+        settingsOverlay
       />
 
       {/* Chrome Tabs - Below Header, with solid background (no gradient) */}
@@ -992,14 +1003,13 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
               setIsUndoPanelOpen(isOpen);
               undoPanelCloseRef.current = closeHandler ?? null;
               if (isOpen) {
-                setRevealStep(TOTAL_REVEAL_STEPS);
                 setCurrentJaw((prev) => prev ?? 'upper');
               }
             }}
             undoState={{
               canUndo: revealStep > 1,
-              canRedo: revealStep < 10,
-              stepInfo: `${revealStep} / 10`,
+              canRedo: revealStep < TOTAL_REVEAL_STEPS,
+              stepInfo: `${revealStep} / ${TOTAL_REVEAL_STEPS}`,
               lastLabel: `Step ${revealStep}`,
               past: undoHistory.past,
               future: undoHistory.future,
@@ -1189,84 +1199,84 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
               {undoVariant === 1 && (
                 <UndoFilmstripChip
                   canUndo={revealStep > 1}
-                  canRedo={revealStep < 10}
+                  canRedo={revealStep < TOTAL_REVEAL_STEPS}
                   onUndo={() => handleUndoAction("undo")}
                   onRedo={() => handleUndoAction("redo")}
-                  onAccept={() => { handleUndoAction("accept"); undoPanelCloseRef.current?.(); }}
+                  onAccept={() => handleUndoAction("accept")}
                 />
               )}
               {undoVariant === 2 && (
                 <UndoBorderlessChip
                   canUndo={revealStep > 1}
-                  canRedo={revealStep < 10}
+                  canRedo={revealStep < TOTAL_REVEAL_STEPS}
                   onUndo={() => handleUndoAction("undo")}
                   onRedo={() => handleUndoAction("redo")}
-                  onAccept={() => { handleUndoAction("accept"); undoPanelCloseRef.current?.(); }}
+                  onAccept={() => handleUndoAction("accept")}
                 />
               )}
               {undoVariant === 3 && (
                 <UndoCompactBar
                   canUndo={revealStep > 1}
-                  canRedo={revealStep < 10}
+                  canRedo={revealStep < TOTAL_REVEAL_STEPS}
                   onUndo={() => handleUndoAction("undo")}
                   onRedo={() => handleUndoAction("redo")}
-                  onAccept={() => { handleUndoAction("accept"); undoPanelCloseRef.current?.(); }}
+                  onAccept={() => handleUndoAction("accept")}
                   onClose={() => undoPanelCloseRef.current?.()}
                 />
               )}
               {undoVariant === 4 && (
                 <UndoLabeledList
                   canUndo={revealStep > 1}
-                  canRedo={revealStep < 10}
+                  canRedo={revealStep < TOTAL_REVEAL_STEPS}
                   onUndo={() => handleUndoAction("undo")}
                   onRedo={() => handleUndoAction("redo")}
-                  onAccept={() => { handleUndoAction("accept"); undoPanelCloseRef.current?.(); }}
+                  onAccept={() => handleUndoAction("accept")}
                   onClose={() => undoPanelCloseRef.current?.()}
                 />
               )}
               {undoVariant === 5 && (
                 <UndoPill
                   canUndo={revealStep > 1}
-                  canRedo={revealStep < 10}
+                  canRedo={revealStep < TOTAL_REVEAL_STEPS}
                   onUndo={() => handleUndoAction("undo")}
                   onRedo={() => handleUndoAction("redo")}
-                  onAccept={() => { handleUndoAction("accept"); undoPanelCloseRef.current?.(); }}
+                  onAccept={() => handleUndoAction("accept")}
                 />
               )}
               {undoVariant === 6 && (
                 <UndoIconsOnly
                   canUndo={revealStep > 1}
-                  canRedo={revealStep < 10}
+                  canRedo={revealStep < TOTAL_REVEAL_STEPS}
                   onUndo={() => handleUndoAction("undo")}
                   onRedo={() => handleUndoAction("redo")}
-                  onAccept={() => { handleUndoAction("accept"); undoPanelCloseRef.current?.(); }}
+                  onAccept={() => handleUndoAction("accept")}
                 />
               )}
               {undoVariant === 7 && (
                 <UndoStacked
                   canUndo={revealStep > 1}
-                  canRedo={revealStep < 10}
+                  canRedo={revealStep < TOTAL_REVEAL_STEPS}
                   onUndo={() => handleUndoAction("undo")}
                   onRedo={() => handleUndoAction("redo")}
-                  onAccept={() => { handleUndoAction("accept"); undoPanelCloseRef.current?.(); }}
+                  onAccept={() => handleUndoAction("accept")}
                 />
               )}
               {undoVariant === 8 && (
                 <UndoHorizontalStacked
                   canUndo={revealStep > 1}
-                  canRedo={revealStep < 10}
+                  canRedo={revealStep < TOTAL_REVEAL_STEPS}
                   onUndo={() => handleUndoAction("undo")}
                   onRedo={() => handleUndoAction("redo")}
-                  onAccept={() => { handleUndoAction("accept"); undoPanelCloseRef.current?.(); }}
+                  onAccept={() => handleUndoAction("accept")}
                 />
               )}
               {undoVariant === 9 && (
                 <UndoLabeledChip
                   canUndo={revealStep > 1}
-                  canRedo={revealStep < 10}
+                  canRedo={revealStep < TOTAL_REVEAL_STEPS}
                   onUndo={() => handleUndoAction("undo")}
                   onRedo={() => handleUndoAction("redo")}
-                  onAccept={() => { handleUndoAction("accept"); undoPanelCloseRef.current?.(); }}
+                  onAccept={() => handleUndoAction("accept")}
                 />
               )}
             </AnimatePresence>
@@ -1293,7 +1303,7 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
         {/* Center Area - Scanning Animation and 3D Model (only shown in normal test flow) */}
         <div className={`absolute inset-0 flex items-center justify-center pointer-events-none ${enableScanGuidance || isCopilotActive ? 'hidden' : ''} ${isUndoPanelOpen ? 'z-[5]' : 'z-0'}`}>
           {/* 3D Teeth Model - Show when scanning, jaw scanned, or undo panel is open */}
-          {(isScanning || isUndoPanelOpen || (currentJaw && (
+          {(isScanning || isUndoPanelOpen || hasAppliedUndoState || (currentJaw && (
             currentJaw === 'bite'
               ? (getTabJawState(activeTabId).upper || getTabJawState(activeTabId).lower || getTabJawState(activeTabId).bite)
               : getTabJawState(activeTabId)[currentJaw]
@@ -1316,7 +1326,11 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
                 key={`${currentJaw}-${activeTabId}-${isUndoPanelOpen ? 'undo' : 'scan'}-${isLeftLateralActive ? 'left-lateral' : ''}`}
                 className="absolute inset-0 pointer-events-auto"
               >
-                <JawPlyViewer jaw={currentJaw || 'upper'} monochrome={isMonochrome} revealStep={revealStep} />
+                <JawPlyViewer
+                  jaw={currentJaw || 'upper'}
+                  monochrome={isMonochrome}
+                  revealStep={(isUndoPanelOpen || hasAppliedUndoState) ? revealStep : TOTAL_REVEAL_STEPS}
+                />
               </motion.div>
             );
           })()}

@@ -68,7 +68,7 @@ export default function UndoIconsOnly({
         <RedoIcon />
       </button>
 
-      {/* Accept */}
+      {/* Apply */}
       <button
         onClick={hasHistory ? onAccept : undefined}
         disabled={!hasHistory}

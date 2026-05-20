@@ -70,7 +70,7 @@ export default function UndoLabeledList({
         </button>
       </div>
 
-      {/* List items: Undo | Redo | Accept */}
+      {/* List items: Undo | Redo | Apply */}
       <div className="bg-white flex items-center rounded-b-[4px]">
         {/* Undo */}
         <button
@@ -106,7 +106,7 @@ export default function UndoLabeledList({
           </span>
         </button>
 
-        {/* Accept */}
+        {/* Apply */}
         <button
           onClick={hasHistory ? onAccept : undefined}
           disabled={!hasHistory}
@@ -123,7 +123,7 @@ export default function UndoLabeledList({
             className="text-[18px] font-normal leading-[28px] px-4"
             style={{ fontFamily: 'Roboto, sans-serif' }}
           >
-            Accept
+            Apply
           </span>
         </button>
       </div>

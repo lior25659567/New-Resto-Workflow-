@@ -374,7 +374,7 @@ export function MultiLayerOption2({ onViewChange, onSliderChange, onLayerStatesC
               }}
               className={`w-[60px] h-[60px] rounded-lg flex items-center justify-center transition-colors ${
                 activeBite === null && currentView === view.id
-                  ? 'bg-[#A6E2F9]'
+                  ? 'bg-[#dff5fc] border border-[#00adef]'
                   : 'bg-white'
               }`}
               layout
@@ -457,7 +457,7 @@ export function MultiLayerOption2({ onViewChange, onSliderChange, onLayerStatesC
                       if (onBiteClick) onBiteClick(bite);
                     }}
                     className={`cursor-pointer transition-colors rounded-[8px] h-[60px] min-h-[60px] min-w-[60px] w-[60px] flex items-center justify-center relative ${
-                      activeBite === bite ? 'bg-[#A6E2F9]' : 'bg-white hover:bg-[#E8F4FA]'
+                      activeBite === bite ? 'bg-[#dff5fc] border border-[#00adef]' : 'bg-white hover:bg-[#E8F4FA]'
                     }`}
                     title={bite}
                     initial={{ opacity: 0 }}

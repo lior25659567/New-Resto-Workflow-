@@ -51,7 +51,7 @@ function AcceptButton({ onClick, disabled }: { onClick: () => void; disabled: bo
         fontFamily: 'Roboto, sans-serif',
       }}
     >
-      Accept
+      Apply
     </button>
   );
 }
@@ -94,7 +94,7 @@ export default function UndoBorderlessChip({
       {/* Divider */}
       <div className="w-px h-12 bg-[#E0E0E0]" />
 
-      {/* Accept */}
+      {/* Apply */}
       <AcceptButton onClick={onAccept} disabled={!canUndo && !canRedo} />
     </motion.div>
   );

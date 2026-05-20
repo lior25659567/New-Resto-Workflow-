@@ -151,7 +151,7 @@ export default function UndoTimelinePanel({ past, future, onJumpTo, onAccept, on
         </div>
       </div>
 
-      {/* Accept footer */}
+      {/* Apply footer */}
       <div className="border-t border-[#e0e0e0] px-4 py-3 flex items-center justify-end gap-3">
         <span className="text-[13px] text-[#8a8a8a]">
           {future.length > 0 ? `${future.length} redo step${future.length !== 1 ? 's' : ''} will be discarded` : 'At latest state'}
@@ -161,7 +161,7 @@ export default function UndoTimelinePanel({ past, future, onJumpTo, onAccept, on
           className="flex items-center gap-1.5 px-4 py-2 rounded-[6px] bg-[#009ACE] text-white text-[13px] font-medium hover:bg-[#007aaa] active:bg-[#006590] transition-colors"
         >
           <CheckIcon />
-          Accept
+          Apply
         </button>
       </div>
     </motion.div>

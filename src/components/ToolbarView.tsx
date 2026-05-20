@@ -16,10 +16,12 @@ import PrepQcPanel from "./PrepQcPanel";
 
 interface ToolbarViewProps {
   onActiveToolChange?: (toolId: number | null) => void;
+  onMonochromeChange?: (active: boolean) => void;
 }
 
-export function ToolbarView({ onActiveToolChange }: ToolbarViewProps = {}) {
+export function ToolbarView({ onActiveToolChange, onMonochromeChange }: ToolbarViewProps = {}) {
   const [selectedTool, setSelectedTool] = useState(-1);
+  const [isMonochromeActive, setIsMonochromeActive] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [isTrimPanelOpen, setIsTrimPanelOpen] = useState(false);
   const [isMarginLinePanelOpen, setIsMarginLinePanelOpen] = useState(false);
@@ -39,18 +41,23 @@ export function ToolbarView({ onActiveToolChange }: ToolbarViewProps = {}) {
   ];
 
   const handleToolClick = (toolId: number) => {
-    // All tools are mutually exclusive - only one can be active at a time
-    
-    // Determine if we're toggling off the currently active tool
-    const isCurrentlyActive = 
-      (toolId === 0 && selectedTool === 0) ||
+    // Monochrome (0) is an independent toggle — does not affect other tools
+    if (toolId === 0) {
+      const next = !isMonochromeActive;
+      setIsMonochromeActive(next);
+      onMonochromeChange?.(next);
+      return;
+    }
+
+    // Tools 1-5 are mutually exclusive among themselves
+    const isCurrentlyActive =
       (toolId === 1 && isReviewPanelOpen) ||
       (toolId === 2 && isOcclusogramPanelOpen) ||
       (toolId === 3 && isMarginLinePanelOpen) ||
       (toolId === 4 && isPrepQcPanelOpen) ||
       (toolId === 5 && isTrimPanelOpen);
 
-    // Close ALL panels first
+    // Close all panels first
     setIsReviewPanelOpen(false);
     setIsOcclusogramPanelOpen(false);
     setIsMarginLinePanelOpen(false);
@@ -58,28 +65,25 @@ export function ToolbarView({ onActiveToolChange }: ToolbarViewProps = {}) {
     setIsTrimPanelOpen(false);
 
     if (isCurrentlyActive) {
-      // Toggling off - no tool active
       setSelectedTool(-1);
-      if (onActiveToolChange) onActiveToolChange(null);
+      onActiveToolChange?.(null);
     } else {
-      // Activate the clicked tool
       setSelectedTool(toolId);
       if (toolId === 1) setIsReviewPanelOpen(true);
       else if (toolId === 2) setIsOcclusogramPanelOpen(true);
       else if (toolId === 3) setIsMarginLinePanelOpen(true);
       else if (toolId === 4) {
         setIsPrepQcPanelOpen(true);
-        setIsPrepQcBannerVisible(true); // Show banner when Prep QC is activated
+        setIsPrepQcBannerVisible(true);
       }
       else if (toolId === 5) setIsTrimPanelOpen(true);
-      
-      if (onActiveToolChange) onActiveToolChange(toolId);
+      onActiveToolChange?.(toolId);
     }
   };
 
   // Helper function to check if a button should be active
   const isButtonActive = (toolId: number) => {
-    if (toolId === 0) return selectedTool === 0;
+    if (toolId === 0) return isMonochromeActive;
     if (toolId === 5) return isTrimPanelOpen;
     if (toolId === 3) return isMarginLinePanelOpen;
     if (toolId === 2) return isOcclusogramPanelOpen;
@@ -127,7 +131,7 @@ export function ToolbarView({ onActiveToolChange }: ToolbarViewProps = {}) {
                 <button
                   onClick={() => handleToolClick(tool.id)}
                   className={`w-[60px] h-[60px] rounded-[10px] flex items-center justify-center transition-all duration-150 ${
-                    isSelected ? 'bg-[#A6E2F9]' : 'bg-white hover:bg-gray-50'
+                    isSelected ? 'bg-[#dff5fc] border border-[#00adef]' : 'bg-white hover:bg-gray-50'
                   } active:scale-95 active:shadow-inner`}
                 >
                   {/* Inner 48x48 container for icon */}

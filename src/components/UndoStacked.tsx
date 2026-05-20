@@ -96,7 +96,7 @@ export default function UndoStacked({
         <RedoIcon />
       </button>
 
-      {/* Accept */}
+      {/* Apply */}
       <AcceptButton onClick={onAccept} disabled={!canUndo && !canRedo} />
     </motion.div>
   );

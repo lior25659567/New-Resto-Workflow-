@@ -1,8 +1,9 @@
-import { Suspense, useMemo, useRef, useEffect } from 'react';
+import { Suspense, useMemo, useRef, useEffect, useState } from 'react';
 import { Canvas, useLoader, useFrame } from '@react-three/fiber';
-import { OrbitControls, Environment, Center } from '@react-three/drei';
+import { Environment, Center } from '@react-three/drei';
 import { PLYLoader } from 'three-stdlib';
 import * as THREE from 'three';
+import JawControls from './JawControls';
 
 import upperJawUrl from '@/assets/3d-models/Upper Jaw .ply?url';
 import lowerJawUrl from '@/assets/3d-models/Lower Jaw.ply?url';
@@ -11,7 +12,7 @@ import hdrUrl from '@/assets/lebombo_1k.hdr?url';
 
 const STONE_COLOR = new THREE.Color(0xe8e4dc);
 const STONE_SHEEN = new THREE.Color(0xf2f0ec);
-const TOTAL_STEPS = 10;
+const TOTAL_STEPS = 60;
 const MESH_SCALE = 0.055;
 
 function usePreparedGeometry(rawGeo: THREE.BufferGeometry, monochrome: boolean) {
@@ -37,13 +38,22 @@ function usePreparedGeometry(rawGeo: THREE.BufferGeometry, monochrome: boolean) 
 }
 
 function getClipConstantForStep(step: number, minZ: number, maxZ: number): number {
+  if (step <= 0) return minZ;
   if (step >= TOTAL_STEPS) return maxZ + 50;
   const range = maxZ - minZ;
   if (range <= 0) return maxZ + 50;
-  return minZ + range * (step / TOTAL_STEPS);
+  // Map clipped steps (1..TOTAL_STEPS-1) into a narrower visible band so the
+  // first undo click already makes a small, visible cut.
+  const clippedSteps = TOTAL_STEPS - 1;
+  const normalized = Math.max(0, Math.min(1, (step - 1) / Math.max(1, clippedSteps - 1)));
+  const minVisibleProgress = 0.02;
+  // Keep first undo visibly clipped while preserving small per-step cuts.
+  const maxClippedProgress = 0.94;
+  const progress = minVisibleProgress + (maxClippedProgress - minVisibleProgress) * normalized;
+  return minZ + range * progress;
 }
 
-/** Full model — no clipping (used for scan view and undo step 10). */
+/** Full model — no clipping (used for scan view and final undo step). */
 function PlyMesh({ url, monochrome }: { url: string; monochrome: boolean }) {
   const rawGeo = useLoader(PLYLoader, url);
   const geometry = usePreparedGeometry(rawGeo, monochrome);
@@ -181,9 +191,10 @@ function SceneContent({
   );
 }
 
-export default function JawPlyViewer({ jaw, monochrome = false, revealStep = 10 }: JawPlyViewerProps) {
+export default function JawPlyViewer({ jaw, monochrome = false, revealStep = TOTAL_STEPS }: JawPlyViewerProps) {
   const modelUrl = jaw === 'upper' ? upperJawUrl : jaw === 'lower' ? lowerJawUrl : biteUrl;
   const useClipping = revealStep < TOTAL_STEPS;
+  const [modelGroup, setModelGroup] = useState<THREE.Group | null>(null);
 
   return (
     <div className="w-full h-full min-h-[300px]">
@@ -197,7 +208,7 @@ export default function JawPlyViewer({ jaw, monochrome = false, revealStep = 10 
           toneMappingExposure: 0.7,
           ...(useClipping ? { localClippingEnabled: true } : {}),
         }}
-        dpr={[1, 2]}
+        dpr={typeof window !== 'undefined' ? window.devicePixelRatio : 1}
         style={{ width: '100%', height: '100%' }}
       >
         <ambientLight intensity={0.3} />
@@ -207,25 +218,13 @@ export default function JawPlyViewer({ jaw, monochrome = false, revealStep = 10 
         <pointLight position={[0, 10, 0]} intensity={0.2} color="#ffffff" />
         <Environment files={hdrUrl} background={false} />
 
-        <Suspense fallback={null}>
-          <SceneContent modelUrl={modelUrl} monochrome={monochrome} revealStep={revealStep} />
-        </Suspense>
+        <group ref={setModelGroup}>
+          <Suspense fallback={null}>
+            <SceneContent modelUrl={modelUrl} monochrome={monochrome} revealStep={revealStep} />
+          </Suspense>
+        </group>
 
-        <OrbitControls
-          makeDefault
-          enablePan
-          enableZoom
-          enableRotate
-          rotateSpeed={1.5}
-          zoomSpeed={1.0}
-          panSpeed={0.8}
-          enableDamping
-          dampingFactor={0.08}
-          minDistance={3}
-          maxDistance={25}
-          minPolarAngle={0.1}
-          maxPolarAngle={Math.PI - 0.1}
-        />
+        <JawControls gizmoTarget={modelGroup} />
       </Canvas>
     </div>
   );

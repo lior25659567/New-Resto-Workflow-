@@ -6,6 +6,7 @@ interface SettingsModalProps {
   onClose: () => void;
   canvasBg?: string;
   onCanvasBgChange?: (color: string) => void;
+  overlay?: boolean;
 }
 
 type SettingsPage = 'main' | 'screen-appearance' | 'brightness';
@@ -260,7 +261,7 @@ function MainPage({ onNavigate, canvasBg, onCanvasBgChange }: { onNavigate: (pag
           User Settings
         </h4>
         <div className="border-t border-[#d1d1d1] pt-[12px]">
-          <div className="flex flex-wrap gap-[4px]">
+          <div className="flex flex-nowrap gap-[4px]">
             <SettingsTile icon={<ScanSettingsIcon />} label="Scan Settings" />
             <SettingsTile icon={<RxSettingsIcon />} label="Rx Settings" />
             <SettingsTile icon={<SignatureSettingsIcon />} label="Signature Settings" />
@@ -650,7 +651,7 @@ function DisplaySettingsPage({ canvasBg, onCanvasBgChange }: { canvasBg: string;
   );
 }
 
-export default function SettingsModal({ onClose, canvasBg = '#D6E7F1', onCanvasBgChange }: SettingsModalProps) {
+export default function SettingsModal({ onClose, canvasBg = '#D6E7F1', onCanvasBgChange, overlay = false }: SettingsModalProps) {
   const [currentPage, setCurrentPage] = useState<SettingsPage>('main');
 
   const pageTitle = currentPage === 'main' ? 'Settings'
@@ -659,14 +660,15 @@ export default function SettingsModal({ onClose, canvasBg = '#D6E7F1', onCanvasB
 
   return createPortal(
     <div
-      className="fixed inset-0 bg-[#6b6b6b] flex items-center justify-center"
+      className={`fixed inset-0 flex items-center justify-center ${overlay ? 'bg-black/50' : 'bg-[#6b6b6b]'}`}
       style={{ zIndex: 99999, pointerEvents: "auto" }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
-        className="bg-[#f5f5f5] rounded-[8px] shadow-[0px_4px_20px_0px_rgba(0,0,0,0.25)] w-[920px] h-[620px] flex flex-col"
+        className="bg-[#f0f0f0] w-[1060px] h-[700px] flex flex-col"
+        style={{ border: '2px solid #1a1a1a', boxShadow: '0px 8px 32px 0px rgba(0,0,0,0.4)' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -674,18 +676,18 @@ export default function SettingsModal({ onClose, canvasBg = '#D6E7F1', onCanvasB
           {currentPage === 'main' ? (
             <button
               onClick={onClose}
-              className="w-[36px] h-[36px] flex items-center justify-center text-[#3FC1F3] hover:text-[#009ACE] transition-colors"
+              className="w-[48px] h-[48px] flex items-center justify-center text-[#3FC1F3] hover:text-[#009ACE] transition-colors"
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 6L6 18M6 6l12 12"/>
               </svg>
             </button>
           ) : (
             <button
               onClick={() => setCurrentPage('main')}
-              className="w-[36px] h-[36px] flex items-center justify-center text-[#3FC1F3] hover:text-[#009ACE] transition-colors"
+              className="w-[48px] h-[48px] flex items-center justify-center text-[#3FC1F3] hover:text-[#009ACE] transition-colors"
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M15 18l-6-6 6-6"/>
               </svg>
             </button>

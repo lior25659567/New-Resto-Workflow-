@@ -186,7 +186,7 @@ export default function UndoListPanel({ past, future, onJumpTo, onAccept, onClos
           className="flex items-center gap-1.5 px-4 py-2 rounded-[6px] bg-[#009ACE] text-white text-[13px] font-medium hover:bg-[#007aaa] active:bg-[#006590] transition-colors"
         >
           <CheckIcon />
-          Accept
+          Apply
         </button>
       </div>
     </motion.div>
