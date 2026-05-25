@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useRef, useEffect, useState } from 'react';
+import { Suspense, useMemo, useRef, useEffect, useState, useCallback } from 'react';
 import { Canvas, useLoader, useFrame } from '@react-three/fiber';
 import { Environment, Center } from '@react-three/drei';
 import { PLYLoader } from 'three-stdlib';
@@ -96,7 +96,7 @@ function PlyMesh({ url, monochrome }: { url: string; monochrome: boolean }) {
   );
 }
 
-/** Partial reveal along Z for undo steps 1–9. */
+/** Partial reveal along Z for undo steps 1–(TOTAL_STEPS-1). */
 function ClippedPlyMesh({
   url,
   monochrome,
@@ -108,6 +108,7 @@ function ClippedPlyMesh({
 }) {
   const rawGeo = useLoader(PLYLoader, url);
   const geometry = usePreparedGeometry(rawGeo, monochrome);
+  const meshRef = useRef<THREE.Mesh>(null);
 
   const { minZ, maxZ } = useMemo(() => {
     const box = new THREE.Box3().setFromBufferAttribute(
@@ -116,22 +117,38 @@ function ClippedPlyMesh({
     return { minZ: box.min.z, maxZ: box.max.z };
   }, [geometry]);
 
-  const targetConstant = getClipConstantForStep(revealStep, minZ, maxZ);
-  const clipPlaneRef = useRef(new THREE.Plane(new THREE.Vector3(0, 0, -1), targetConstant));
-  const animatedConstant = useRef(targetConstant);
+  // Clip plane starts with world-space normal pointing in -Z; will be transformed
+  // to local space each update via applyMatrix4 so that clipping tracks the mesh's
+  // actual orientation and scale (local constants are ~50× larger than world coords).
+  const clipPlaneRef = useRef(new THREE.Plane(new THREE.Vector3(0, 0, -1), 0));
+  const animatedLocalConstant = useRef(getClipConstantForStep(revealStep, minZ, maxZ));
+  // Scratch objects to avoid per-frame allocation
+  const tmpPlane = useRef(new THREE.Plane());
+  const localNormal = useRef(new THREE.Vector3(0, 0, -1));
+
+  const applyWorldPlane = useCallback((localConst: number) => {
+    const mesh = meshRef.current;
+    if (!mesh) return;
+    mesh.updateWorldMatrix(true, false);
+    tmpPlane.current.set(localNormal.current, localConst);
+    tmpPlane.current.applyMatrix4(mesh.matrixWorld);
+    clipPlaneRef.current.copy(tmpPlane.current);
+  }, []);
+
+  const targetLocalConstant = getClipConstantForStep(revealStep, minZ, maxZ);
 
   useFrame((_, delta) => {
-    const diff = targetConstant - animatedConstant.current;
+    const diff = targetLocalConstant - animatedLocalConstant.current;
     if (Math.abs(diff) > 0.01) {
-      animatedConstant.current += diff * Math.min(4.0 * delta * 3, 1);
-      clipPlaneRef.current.constant = animatedConstant.current;
+      animatedLocalConstant.current += diff * Math.min(4.0 * delta * 3, 1);
+      applyWorldPlane(animatedLocalConstant.current);
     }
   });
 
   useEffect(() => {
-    animatedConstant.current = targetConstant;
-    clipPlaneRef.current.constant = targetConstant;
-  }, [targetConstant]);
+    animatedLocalConstant.current = targetLocalConstant;
+    applyWorldPlane(targetLocalConstant);
+  }, [targetLocalConstant, applyWorldPlane]);
 
   const clippingPlanes = useMemo(() => [clipPlaneRef.current], []);
 
@@ -149,7 +166,7 @@ function ClippedPlyMesh({
       };
 
   return (
-    <mesh geometry={geometry} scale={MESH_SCALE} rotation={[0.1, -0.4, 0]}>
+    <mesh ref={meshRef} geometry={geometry} scale={MESH_SCALE} rotation={[0.1, -0.4, 0]}>
       <meshPhysicalMaterial
         {...materialProps}
         metalness={0.0}
