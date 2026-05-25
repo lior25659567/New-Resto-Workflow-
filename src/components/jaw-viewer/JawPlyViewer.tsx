@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useRef, useEffect, useState, useCallback } from 'react';
+import { Suspense, useMemo, useRef, useState } from 'react';
 import { Canvas, useLoader, useFrame } from '@react-three/fiber';
 import { Environment, Center } from '@react-three/drei';
 import { PLYLoader } from 'three-stdlib';
@@ -12,8 +12,8 @@ import hdrUrl from '@/assets/lebombo_1k.hdr?url';
 
 const STONE_COLOR = new THREE.Color(0xe8e4dc);
 const STONE_SHEEN = new THREE.Color(0xf2f0ec);
-const TOTAL_STEPS = 60;
-const MESH_SCALE = 0.055;
+const TOTAL_STEPS = 10;
+const MESH_SCALE = 0.035;
 
 function usePreparedGeometry(rawGeo: THREE.BufferGeometry, monochrome: boolean) {
   return useMemo(() => {
@@ -60,7 +60,7 @@ function PlyMesh({ url, monochrome }: { url: string; monochrome: boolean }) {
 
   if (monochrome) {
     return (
-      <mesh geometry={geometry} scale={MESH_SCALE} rotation={[0.1, -0.4, 0]}>
+      <mesh geometry={geometry} scale={MESH_SCALE} rotation={[Math.PI * 0.6, 0, Math.PI]}>
         <meshPhysicalMaterial
           color={STONE_COLOR}
           roughness={0.75}
@@ -80,7 +80,7 @@ function PlyMesh({ url, monochrome }: { url: string; monochrome: boolean }) {
   }
 
   return (
-    <mesh geometry={geometry} scale={MESH_SCALE} rotation={[0.1, -0.4, 0]}>
+    <mesh geometry={geometry} scale={MESH_SCALE} rotation={[Math.PI * 0.6, 0, Math.PI]}>
       <meshPhysicalMaterial
         vertexColors
         roughness={0.4}
@@ -96,7 +96,11 @@ function PlyMesh({ url, monochrome }: { url: string; monochrome: boolean }) {
   );
 }
 
-/** Partial reveal along Z for undo steps 1–(TOTAL_STEPS-1). */
+/** Partial reveal along world-Z for undo steps 1–(TOTAL_STEPS-1).
+ *  Clips from the front of the scene (world +Z = toward viewer) inward,
+ *  giving the "trim from edges" effect as outer surfaces disappear first.
+ *  World-space bounds are computed on the first rendered frame so the
+ *  constant is always in the same units as the clip plane normal. */
 function ClippedPlyMesh({
   url,
   monochrome,
@@ -110,45 +114,36 @@ function ClippedPlyMesh({
   const geometry = usePreparedGeometry(rawGeo, monochrome);
   const meshRef = useRef<THREE.Mesh>(null);
 
-  const { minZ, maxZ } = useMemo(() => {
-    const box = new THREE.Box3().setFromBufferAttribute(
-      geometry.attributes.position as THREE.BufferAttribute
-    );
-    return { minZ: box.min.z, maxZ: box.max.z };
-  }, [geometry]);
-
-  // Clip plane starts with world-space normal pointing in -Z; will be transformed
-  // to local space each update via applyMatrix4 so that clipping tracks the mesh's
-  // actual orientation and scale (local constants are ~50× larger than world coords).
-  const clipPlaneRef = useRef(new THREE.Plane(new THREE.Vector3(0, 0, -1), 0));
-  const animatedLocalConstant = useRef(getClipConstantForStep(revealStep, minZ, maxZ));
-  // Scratch objects to avoid per-frame allocation
-  const tmpPlane = useRef(new THREE.Plane());
-  const localNormal = useRef(new THREE.Vector3(0, 0, -1));
-
-  const applyWorldPlane = useCallback((localConst: number) => {
-    const mesh = meshRef.current;
-    if (!mesh) return;
-    mesh.updateWorldMatrix(true, false);
-    tmpPlane.current.set(localNormal.current, localConst);
-    tmpPlane.current.applyMatrix4(mesh.matrixWorld);
-    clipPlaneRef.current.copy(tmpPlane.current);
-  }, []);
-
-  const targetLocalConstant = getClipConstantForStep(revealStep, minZ, maxZ);
+  // World-space clip plane: normal (0,0,-1) keeps vertices where world_z ≤ constant.
+  // Starts fully open (nothing clipped) until world bounds are known.
+  const clipPlaneRef = useRef(new THREE.Plane(new THREE.Vector3(0, 0, -1), 1000));
+  const animatedConstant = useRef(1000);
+  // World Z bounds — populated on the first rendered frame via setFromObject.
+  const worldBounds = useRef<{ minZ: number; maxZ: number } | null>(null);
 
   useFrame((_, delta) => {
-    const diff = targetLocalConstant - animatedLocalConstant.current;
-    if (Math.abs(diff) > 0.01) {
-      animatedLocalConstant.current += diff * Math.min(4.0 * delta * 3, 1);
-      applyWorldPlane(animatedLocalConstant.current);
+    const mesh = meshRef.current;
+    if (!mesh) return;
+
+    // Initialise world-space bounds once (matrices are valid by first frame).
+    if (!worldBounds.current) {
+      mesh.updateWorldMatrix(true, false);
+      const box = new THREE.Box3().setFromObject(mesh);
+      worldBounds.current = { minZ: box.min.z, maxZ: box.max.z };
+      const init = getClipConstantForStep(revealStep, box.min.z, box.max.z);
+      animatedConstant.current = init;
+      clipPlaneRef.current.constant = init;
+      return;
+    }
+
+    const { minZ, maxZ } = worldBounds.current;
+    const target = getClipConstantForStep(revealStep, minZ, maxZ);
+    const diff = target - animatedConstant.current;
+    if (Math.abs(diff) > 0.001) {
+      animatedConstant.current += diff * Math.min(4.0 * delta * 3, 1);
+      clipPlaneRef.current.constant = animatedConstant.current;
     }
   });
-
-  useEffect(() => {
-    animatedLocalConstant.current = targetLocalConstant;
-    applyWorldPlane(targetLocalConstant);
-  }, [targetLocalConstant, applyWorldPlane]);
 
   const clippingPlanes = useMemo(() => [clipPlaneRef.current], []);
 
@@ -166,7 +161,7 @@ function ClippedPlyMesh({
       };
 
   return (
-    <mesh ref={meshRef} geometry={geometry} scale={MESH_SCALE} rotation={[0.1, -0.4, 0]}>
+    <mesh ref={meshRef} geometry={geometry} scale={MESH_SCALE} rotation={[Math.PI * 0.6, 0, Math.PI]}>
       <meshPhysicalMaterial
         {...materialProps}
         metalness={0.0}
@@ -213,9 +208,9 @@ export default function JawPlyViewer({ jaw, monochrome = false, revealStep = TOT
   const [modelGroup, setModelGroup] = useState<THREE.Group | null>(null);
 
   return (
-    <div className="w-full h-full min-h-[300px]">
+    <div className="w-full h-full min-h-[300px]" style={{ touchAction: 'none' }}>
       <Canvas
-        camera={{ position: [0, 0, 14], fov: 35 }}
+        camera={{ position: [0, -2, 4.5], fov: 40, near: 0.01, far: 1000, up: [0, 1, 0] }}
         gl={{
           antialias: true,
           alpha: true,

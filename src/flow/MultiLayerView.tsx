@@ -417,13 +417,13 @@ export default function MultiLayerView({ patient, onBack, onHome, onNavigateToMu
         {/* 3D Canvas — renders PLY jaw models based on view and layer states */}
         <div className="absolute inset-0">
           <Canvas
-            camera={{ position: [0, 0, 14], fov: 35 }}
+            camera={{ position: [0, -2, 4.5], fov: 40, near: 0.01, far: 1000, up: [0, 1, 0] }}
             gl={{
               antialias: true,
               alpha: true,
               preserveDrawingBuffer: true,
               toneMapping: THREE.ACESFilmicToneMapping,
-              toneMappingExposure: 1.0,
+              toneMappingExposure: 0.7,
             }}
             style={{ touchAction: 'none', background: 'transparent' }}
             dpr={typeof window !== 'undefined' ? window.devicePixelRatio : 1}

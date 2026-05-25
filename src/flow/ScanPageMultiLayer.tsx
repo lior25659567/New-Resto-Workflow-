@@ -228,8 +228,8 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
   const undoPanelCloseRef = useRef<(() => void) | null>(null);
   const isRestoringRef = useRef(false);
 
-  // Visual reveal step for undo/redo 3D clipping effect (1-60, 60 = full model)
-  const [revealStep, setRevealStep] = useState(60);
+  // Visual reveal step for undo/redo 3D clipping effect (1-10, 10 = full model)
+  const [revealStep, setRevealStep] = useState(10);
   // Keeps the accepted undo preview visible after the panel closes
   const [hasAppliedUndoState, setHasAppliedUndoState] = useState(false);
 
@@ -737,7 +737,7 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
     requestAnimationFrame(() => { isRestoringRef.current = false; });
   };
 
-  const TOTAL_REVEAL_STEPS = 60;
+  const TOTAL_REVEAL_STEPS = 10;
 
   // Unified handler for undo tool actions
   const handleUndoAction = (action: "undo" | "redo" | "accept") => {

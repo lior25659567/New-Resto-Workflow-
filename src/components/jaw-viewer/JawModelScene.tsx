@@ -32,10 +32,10 @@ interface JawModelSceneProps {
   singleUpperPos?: [number, number, number];
 }
 
-const SCALE = 0.055;
+const SCALE = 0.035;
 
-const UPPER_ROT: [number, number, number] = [0.1, -0.4, 0];
-const LOWER_ROT: [number, number, number] = [0, -0.4, 0];
+const UPPER_ROT: [number, number, number] = [Math.PI * 0.6, 0, Math.PI];
+const LOWER_ROT: [number, number, number] = [Math.PI * 0.6, 0, Math.PI];
 
 export const DEFAULT_BOTH_UPPER_POS: [number, number, number] = [-0.35, -0.10, 0.75];
 export const DEFAULT_BOTH_LOWER_POS: [number, number, number] = [0.25, 0.00, -0.40];
@@ -126,7 +126,7 @@ export default function JawModelScene({
         </group>
       </group>
 
-      <JawControls gizmoTarget={modelGroup} autoFit={false} />
+      <JawControls gizmoTarget={modelGroup} />
     </>
   );
 }
