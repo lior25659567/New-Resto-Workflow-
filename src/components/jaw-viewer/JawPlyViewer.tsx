@@ -193,7 +193,6 @@ function SceneContent({
 
 export default function JawPlyViewer({ jaw, monochrome = false, revealStep = TOTAL_STEPS }: JawPlyViewerProps) {
   const modelUrl = jaw === 'upper' ? upperJawUrl : jaw === 'lower' ? lowerJawUrl : biteUrl;
-  const useClipping = revealStep < TOTAL_STEPS;
   const [modelGroup, setModelGroup] = useState<THREE.Group | null>(null);
 
   return (
@@ -206,7 +205,7 @@ export default function JawPlyViewer({ jaw, monochrome = false, revealStep = TOT
           preserveDrawingBuffer: true,
           toneMapping: THREE.ACESFilmicToneMapping,
           toneMappingExposure: 0.7,
-          ...(useClipping ? { localClippingEnabled: true } : {}),
+          localClippingEnabled: true,
         }}
         dpr={typeof window !== 'undefined' ? window.devicePixelRatio : 1}
         style={{ width: '100%', height: '100%' }}
