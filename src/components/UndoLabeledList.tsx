@@ -123,7 +123,7 @@ export default function UndoLabeledList({
             className="text-[18px] font-normal leading-[28px] px-4"
             style={{ fontFamily: 'Roboto, sans-serif' }}
           >
-            Apply
+            Accept
           </span>
         </button>
       </div>

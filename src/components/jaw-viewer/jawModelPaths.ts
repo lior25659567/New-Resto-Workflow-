@@ -1,25 +1,25 @@
-import upperJawPretreatment from '@/assets/3d-models/iTero_upper_pretreatment.ply?url';
-import upperJawTreatment from '@/assets/3d-models/iTero_upper_treatment.ply?url';
-import lowerJawPretreatment from '@/assets/3d-models/iTero_lower_pretreatment.ply?url';
-import lowerJawTreatment from '@/assets/3d-models/iTero_lower_treatment.ply?url';
-import bite from '@/assets/3d-models/Bite.ply?url';
-
-import upperTexture from '@/assets/3d-models/iTero_upper_treatment_texture.jpg?url';
-import lowerTreatmentTexture from '@/assets/3d-models/iTero_lower_treatment_texture.jpg?url';
-import lowerPretreatmentTexture from '@/assets/3d-models/iTero_lower_pretreatment_texture.jpg?url';
+// New Blender-exported models with embedded RGBA vertex colors — no separate texture file needed.
+import newLowerJaw   from '@/assets/3d-models/new 3d models /Lower.ply?url';
+import newUpperJaw   from '@/assets/3d-models/new 3d models /Upper.ply?url';
+import newBothArches from '@/assets/3d-models/new 3d models /Both Arches.ply?url';
+import bite          from '@/assets/3d-models/Bite.ply?url';
 
 export const jawModels = {
-  upper_pretreatment: upperJawPretreatment,
-  upper_treatment: upperJawTreatment,
-  lower_pretreatment: lowerJawPretreatment,
-  lower_treatment: lowerJawTreatment,
+  upper_pretreatment: newLowerJaw,
+  upper_treatment:    newLowerJaw,
+  lower_pretreatment: newUpperJaw,
+  lower_treatment:    newUpperJaw,
   bite,
+  both_arches:        newBothArches,
 };
 
-// Each model's companion texture for vertex-color baking
+// Empty strings: new models have vertex colors baked in, no texture atlas required.
+// Legacy iTero models would use their _texture.jpg paths here.
 export const jawTextures = {
-  upper_pretreatment: upperTexture,           // same source file as treatment
-  upper_treatment: upperTexture,
-  lower_pretreatment: lowerPretreatmentTexture,
-  lower_treatment: lowerTreatmentTexture,
+  upper_pretreatment: '',
+  upper_treatment:    '',
+  lower_pretreatment: '',
+  lower_treatment:    '',
+  bite:               '',
+  both_arches:        '',
 };

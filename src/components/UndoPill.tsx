@@ -73,7 +73,7 @@ export default function UndoPill({
         }`}
         style={{ fontFamily: 'Roboto, sans-serif' }}
       >
-        Apply
+        Accept
       </button>
     </motion.div>
   );

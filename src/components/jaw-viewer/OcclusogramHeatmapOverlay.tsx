@@ -66,7 +66,7 @@ const GUM_PINKNESS_THRESHOLD = 0.30;
 
 interface OcclusogramHeatmapOverlayProps {
   url: string;
-  textureUrl: string;
+  textureUrl?: string;
   jawType: 'upper' | 'lower' | 'bite';
   position?: [number, number, number];
   rotation?: [number, number, number];
@@ -76,7 +76,7 @@ interface OcclusogramHeatmapOverlayProps {
 
 export default function OcclusogramHeatmapOverlay({
   url,
-  textureUrl,
+  textureUrl = '',
   jawType,
   position = [0, 0, 0],
   rotation = [0, 0, 0],

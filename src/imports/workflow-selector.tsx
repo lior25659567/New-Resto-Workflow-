@@ -1,4 +1,4 @@
-  <div className="flex flex-col h-screen w-full bg-[#D6E7F1] relative">
+  <div className="flex flex-col h-screen w-full bg-[#E0EDF4] relative">
       {/* Workflow Selector - Bottom Left Corner */}
       <div className="absolute bottom-[16px] left-[16px] z-[60]">
         <div className="flex flex-row items-center gap-[8px] bg-white rounded-[8px] p-[12px] shadow-lg">

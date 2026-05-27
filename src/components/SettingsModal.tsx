@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import teethModelImg from "../assets/Clincheck weave model.png";
 
@@ -12,11 +12,12 @@ interface SettingsModalProps {
 type SettingsPage = 'main' | 'screen-appearance' | 'brightness';
 
 const BG_THEMES = [
-  { color: "#D6E7F1", label: "iTero Blue", isDefault: true },
-  { color: "#5F5F5F", label: "Medium Gray" },
-  { color: "#595959", label: "Dark Gray" },
-  { color: "#737373", label: "Gray" },
-  { color: "#F7F7F7", label: "Light" },
+  { color: "#E0EDF4", label: "Default", isDefault: true },
+  { color: "#FAFAFA", label: "Light", isDefault: false },
+  { color: "#F4F4F5", label: "Light Medium", isDefault: false },
+  { color: "#D4D4D8", label: "Medium", isDefault: false },
+  { color: "#71717A", label: "Dark Medium", isDefault: false },
+  { color: "#3F3F46", label: "Dark", isDefault: false },
 ];
 
 function BrightnessIcon() {
@@ -198,7 +199,7 @@ function ScreenAppearanceIcon() {
       <rect x="8" y="10" width="32" height="22" rx="3" stroke="#009ACE" strokeWidth="2.5"/>
       <path d="M18 36h12" stroke="#009ACE" strokeWidth="2.5" strokeLinecap="round"/>
       <path d="M24 32v4" stroke="#009ACE" strokeWidth="2.5" strokeLinecap="round"/>
-      <circle cx="16" cy="21" r="4" fill="#D6E7F1" stroke="#009ACE" strokeWidth="1.5"/>
+      <circle cx="16" cy="21" r="4" fill="#E0EDF4" stroke="#009ACE" strokeWidth="1.5"/>
       <circle cx="24" cy="21" r="4" fill="#5F5F5F" stroke="#009ACE" strokeWidth="1.5"/>
       <circle cx="32" cy="21" r="4" fill="#2C2C2C" stroke="#009ACE" strokeWidth="1.5"/>
     </svg>
@@ -299,10 +300,87 @@ function MainPage({ onNavigate, canvasBg, onCanvasBgChange }: { onNavigate: (pag
 
 function VariantCards({ canvasBg, onCanvasBgChange }: { canvasBg: string; onCanvasBgChange?: (color: string) => void }) {
   return (
-    <div className="grid grid-cols-2 gap-[12px]">
+    <div className="grid grid-cols-3 gap-[12px]">
       {BG_THEMES.map((theme) => {
         const isSelected = canvasBg === theme.color;
-        const isDark = theme.color !== '#D6E7F1' && theme.color !== '#F7F7F7';
+        const isDark = theme.color === '#71717A' || theme.color === '#3F3F46';
+        return (
+          <div key={theme.color} className="flex flex-col items-center gap-[8px] w-full">
+            {/* Theme preview card - top */}
+            <div
+              className="w-full aspect-video rounded-[10px] border-[1px] border-[#e5e5e5] hover:border-[#d1d1d1] transition-all relative overflow-hidden cursor-pointer"
+              style={{ backgroundColor: theme.color }}
+              onClick={() => onCanvasBgChange?.(theme.color)}
+            >
+              <div className="absolute inset-0 p-[6px] flex flex-col">
+                <div className="h-[8px] rounded-[2px] w-full" style={{ backgroundColor: isDark ? '#ffffff' : '#3e3d40', opacity: 0.15 }} />
+                <div className="flex-1 relative">
+                  <div className="absolute top-[6px] left-[2px] w-[28px] flex flex-col gap-[3px]">
+                    <div className="h-[5px] w-full rounded-[1px]" style={{ backgroundColor: isDark ? '#ffffff' : '#3e3d40', opacity: 0.18 }} />
+                    <div className="h-[5px] w-[20px] rounded-[1px]" style={{ backgroundColor: isDark ? '#ffffff' : '#3e3d40', opacity: 0.12 }} />
+                    <div className="h-[5px] w-[24px] rounded-[1px]" style={{ backgroundColor: isDark ? '#ffffff' : '#3e3d40', opacity: 0.10 }} />
+                  </div>
+                  <div className="absolute top-[6px] right-[2px] flex gap-[2px]">
+                    {[0,1,2,3].map(i => (
+                      <div key={i} className="w-[8px] h-[8px] rounded-[2px]" style={{ backgroundColor: isDark ? '#ffffff' : '#3e3d40', opacity: 0.18 }} />
+                    ))}
+                  </div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <img src={teethModelImg} alt="Dental model" className="max-w-[38%] max-h-[38%] object-contain drop-shadow-md" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Radio button + label section - bottom */}
+            <div className="flex items-center gap-[8px] w-full">
+              <button
+                onClick={() => onCanvasBgChange?.(theme.color)}
+                className={`w-[20px] h-[20px] rounded-full border-[2px] transition-all duration-200 relative flex items-center justify-center flex-shrink-0 ${
+                  isSelected 
+                    ? 'border-[#009ACE] bg-white' 
+                    : 'border-[#d1d5db] bg-white hover:border-[#9ca3af] focus:border-[#009ACE] focus:ring-2 focus:ring-[#009ACE]/20'
+                }`}
+                aria-label={`Select ${theme.label} theme`}
+                role="radio"
+                aria-checked={isSelected}
+              >
+                {/* Radio button dot with smooth animation */}
+                <div 
+                  className={`w-[10px] h-[10px] rounded-full transition-all duration-200 ease-out ${
+                    isSelected 
+                      ? 'bg-[#009ACE] scale-100 opacity-100' 
+                      : 'bg-transparent scale-75 opacity-0'
+                  }`} 
+                />
+              </button>
+              
+              {/* Theme label */}
+              <button
+                onClick={() => onCanvasBgChange?.(theme.color)}
+                className={`font-['Roboto',sans-serif] text-[13px] leading-[18px] transition-colors duration-200 text-left flex-1 min-w-0 ${
+                  isSelected ? 'font-medium text-[#1f2937]' : 'font-normal text-[#4b5563] hover:text-[#1f2937]'
+                }`}
+                style={{ fontVariationSettings: "'wdth' 100" }}
+              >
+                <span className="block truncate">
+                  {theme.label}
+                </span>
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function VariantCards3Col({ canvasBg, onCanvasBgChange }: { canvasBg: string; onCanvasBgChange?: (color: string) => void }) {
+  return (
+    <div className="grid grid-cols-3 gap-[12px]">
+      {BG_THEMES.map((theme) => {
+        const isSelected = canvasBg === theme.color;
+        const isDark = theme.color === '#71717A' || theme.color === '#3F3F46';
         return (
           <button
             key={theme.color}
@@ -310,37 +388,26 @@ function VariantCards({ canvasBg, onCanvasBgChange }: { canvasBg: string; onCanv
             className="flex flex-col items-center gap-[8px] cursor-pointer group w-full"
           >
             <div
-              className={`w-full h-[200px] rounded-[10px] border-[2.5px] transition-all relative overflow-hidden ${
-                isSelected ? 'border-[#009ACE] shadow-[0_0_0_2px_rgba(0,154,206,0.2)]' : 'border-[#d1d1d1] group-hover:border-[#a0a0a0]'
+              className={`w-full aspect-video rounded-[10px] transition-all relative overflow-hidden ${
+                isSelected ? 'border-[2px] border-[#009ACE] shadow-[0_0_0_1px_rgba(0,154,206,0.2)]' : 'border-[1px] border-[#e5e5e5] group-hover:border-[#d1d1d1]'
               }`}
               style={{ backgroundColor: theme.color }}
             >
-              {/* View page skeleton */}
               <div className="absolute inset-0 p-[6px] flex flex-col">
-                {/* Header bar */}
                 <div className="h-[8px] rounded-[2px] w-full" style={{ backgroundColor: isDark ? '#ffffff' : '#3e3d40', opacity: 0.15 }} />
-                {/* Body */}
                 <div className="flex-1 relative">
-                  {/* Left layer panel skeleton */}
                   <div className="absolute top-[6px] left-[2px] w-[28px] flex flex-col gap-[3px]">
                     <div className="h-[5px] w-full rounded-[1px]" style={{ backgroundColor: isDark ? '#ffffff' : '#3e3d40', opacity: 0.18 }} />
                     <div className="h-[5px] w-[20px] rounded-[1px]" style={{ backgroundColor: isDark ? '#ffffff' : '#3e3d40', opacity: 0.12 }} />
                     <div className="h-[5px] w-[24px] rounded-[1px]" style={{ backgroundColor: isDark ? '#ffffff' : '#3e3d40', opacity: 0.10 }} />
                   </div>
-                  {/* Right toolbar skeleton */}
                   <div className="absolute top-[6px] right-[2px] flex gap-[2px]">
-                    <div className="w-[8px] h-[8px] rounded-[2px]" style={{ backgroundColor: isDark ? '#ffffff' : '#3e3d40', opacity: 0.18 }} />
-                    <div className="w-[8px] h-[8px] rounded-[2px]" style={{ backgroundColor: isDark ? '#ffffff' : '#3e3d40', opacity: 0.18 }} />
-                    <div className="w-[8px] h-[8px] rounded-[2px]" style={{ backgroundColor: isDark ? '#ffffff' : '#3e3d40', opacity: 0.18 }} />
-                    <div className="w-[8px] h-[8px] rounded-[2px]" style={{ backgroundColor: isDark ? '#ffffff' : '#3e3d40', opacity: 0.18 }} />
+                    {[0,1,2,3].map(i => (
+                      <div key={i} className="w-[8px] h-[8px] rounded-[2px]" style={{ backgroundColor: isDark ? '#ffffff' : '#3e3d40', opacity: 0.18 }} />
+                    ))}
                   </div>
-                  {/* Center teeth model */}
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <img
-                      src={teethModelImg}
-                      alt="Dental model"
-                      className="max-w-[45%] max-h-[45%] object-contain drop-shadow-md"
-                    />
+                    <img src={teethModelImg} alt="Dental model" className="max-w-[38%] max-h-[38%] object-contain drop-shadow-md" />
                   </div>
                 </div>
               </div>
@@ -354,18 +421,130 @@ function VariantCards({ canvasBg, onCanvasBgChange }: { canvasBg: string; onCanv
               >
                 {theme.label}
               </span>
-              {theme.isDefault && (
-                <span
-                  className="font-['Roboto',sans-serif] text-[11px] text-[#999] leading-[14px]"
-                  style={{ fontVariationSettings: "'wdth' 100" }}
-                >
-                  Default
-                </span>
-              )}
             </div>
           </button>
         );
       })}
+    </div>
+  );
+}
+
+function VariantLivePreview({ canvasBg, onCanvasBgChange }: { canvasBg: string; onCanvasBgChange?: (color: string) => void }) {
+  const isDark = canvasBg === '#71717A' || canvasBg === '#3F3F46';
+  const ui = (a: number) => isDark ? `rgba(255,255,255,${a})` : `rgba(62,61,64,${a})`;
+
+  return (
+    <div className="flex flex-col gap-[20px]">
+      {/* Live preview frame — flex column so children use flex sizing, not % heights */}
+      <div
+        className="w-full rounded-[10px] overflow-hidden border-[2px] border-[#c0c0c0] shadow-[0_4px_24px_rgba(0,0,0,0.18)] flex flex-col"
+        style={{ aspectRatio: '16/9' }}
+      >
+        {/* App header */}
+        <div
+          className="bg-[#1c1c1c] flex items-center justify-between shrink-0 px-[2%]"
+          style={{ flex: '0 0 9%' }}
+        >
+          <div className="flex items-center gap-[6px]">
+            <div className="rounded-[3px] bg-[#009ACE]" style={{ width: 18, height: 18 }} />
+            <div className="rounded-[2px]" style={{ width: 48, height: 7, background: 'rgba(255,255,255,0.25)' }} />
+          </div>
+          <div className="flex gap-[6px] items-center">
+            <div className="rounded-[2px]" style={{ width: 70, height: 6, background: 'rgba(255,255,255,0.35)' }} />
+            <div className="rounded-[2px]" style={{ width: 44, height: 6, background: 'rgba(255,255,255,0.2)' }} />
+          </div>
+          <div className="flex gap-[6px]">
+            {[22, 16, 16].map((w, i) => (
+              <div key={i} className="rounded-[3px]" style={{ width: w, height: 16, background: 'rgba(255,255,255,0.18)' }} />
+            ))}
+          </div>
+        </div>
+
+        {/* Main canvas area */}
+        <div className="flex flex-1 min-h-0" style={{ background: canvasBg }}>
+
+          {/* Left: jaw selector panel */}
+          <div className="flex flex-col items-center shrink-0 pt-[3%] gap-[5%]" style={{ width: '9%' }}>
+            <div className="rounded-[4px] border" style={{
+              width: '65%', aspectRatio: '1/1.9',
+              background: ui(0.22), borderColor: ui(0.3),
+            }} />
+            <div className="rounded-[3px]" style={{ width: '65%', height: 14, background: ui(0.35) }} />
+          </div>
+
+          {/* Center canvas */}
+          <div className="flex-1 flex flex-col items-center justify-center relative">
+            {/* Chrome tabs */}
+            <div className="absolute top-[8%] flex gap-[3px]">
+              {['Upper', 'Lower', 'Both'].map((label, i) => (
+                <div key={label} className="rounded-[3px]" style={{
+                  padding: '2px 7px',
+                  background: i === 0 ? 'rgba(255,255,255,0.85)' : ui(0.18),
+                  fontSize: 7, fontFamily: 'Roboto, sans-serif',
+                  color: i === 0 ? '#3e3d40' : ui(0.8),
+                  lineHeight: '13px',
+                }}>
+                  {label}
+                </div>
+              ))}
+            </div>
+
+            {/* 3D model */}
+            <img
+              src={teethModelImg}
+              alt="Dental model preview"
+              style={{ maxWidth: '34%', maxHeight: '58%', objectFit: 'contain', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.22))' }}
+            />
+
+            {/* Bottom-left panel hint */}
+            <div className="absolute bottom-[7%] left-[2%] rounded-[4px]" style={{
+              width: '14%', height: '18%',
+              background: ui(0.18), border: `1px solid ${ui(0.2)}`,
+            }} />
+          </div>
+
+          {/* Right: toolbar */}
+          <div className="flex flex-col items-center shrink-0 pt-[3%] gap-[3%]" style={{ width: '6%' }}>
+            {Array.from({ length: 7 }).map((_, i) => (
+              <div key={i} className="rounded-[3px]" style={{
+                width: '55%', aspectRatio: '1/1',
+                background: i === 0 ? 'rgba(0,154,206,0.75)' : ui(0.22),
+              }} />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Swatch row */}
+      <div className="flex items-center gap-[16px]">
+        {BG_THEMES.map((theme) => {
+          const isSelected = canvasBg === theme.color;
+          return (
+            <button
+              key={theme.color}
+              onClick={() => onCanvasBgChange?.(theme.color)}
+              className="flex flex-col items-center gap-[5px] cursor-pointer group"
+            >
+              <div
+                className={`rounded-[8px] transition-all ${
+                  isSelected
+                    ? 'border-[2px] border-[#009ACE] scale-105 shadow-[0_0_0_1px_rgba(0,154,206,0.25)]'
+                    : 'border-[1px] border-[#e5e5e5] group-hover:border-[#d1d1d1] group-hover:scale-102'
+                }`}
+                style={{ width: 48, height: 48, backgroundColor: theme.color }}
+              />
+              <span
+                className={`font-['Roboto',sans-serif] text-[11px] text-center leading-[14px] transition-colors ${
+                  isSelected ? 'font-medium text-[#009ACE]' : 'font-normal text-[#717073]'
+                }`}
+                style={{ fontVariationSettings: "'wdth' 100" }}
+              >
+                {theme.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -390,7 +569,6 @@ function VariantDropdown({ canvasBg, onCanvasBgChange }: { canvasBg: string; onC
           style={{ fontVariationSettings: "'wdth' 100" }}
         >
           {selectedTheme.label}
-          {selectedTheme.isDefault ? ' (Default)' : ''}
         </span>
         <svg
           width="16" height="16" viewBox="0 0 16 16" fill="none"
@@ -424,7 +602,6 @@ function VariantDropdown({ canvasBg, onCanvasBgChange }: { canvasBg: string; onC
                   style={{ fontVariationSettings: "'wdth' 100" }}
                 >
                   {theme.label}
-                  {theme.isDefault ? ' (Default)' : ''}
                 </span>
                 {isSelected && (
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -477,38 +654,23 @@ function VariantCircles({ canvasBg, onCanvasBgChange }: { canvasBg: string; onCa
 
 
 function ScreenAppearancePage({ canvasBg, onCanvasBgChange }: { canvasBg: string; onCanvasBgChange?: (color: string) => void }) {
-  const [variant, setVariant] = useState<1 | 2 | 3 | 4>(1);
+  const [variant, setVariant] = useState<1 | 2 | 3 | 4 | 5 | 6>(1);
 
-  const variantLabels = [
-    { id: 1 as const, label: 'Cards' },
-    { id: 2 as const, label: 'Dropdown' },
-    { id: 3 as const, label: 'Circles' },
-    { id: 4 as const, label: 'Swatches' },
-  ];
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === '1') setVariant(1);
+      else if (e.key === '2') setVariant(2);
+      else if (e.key === '3') setVariant(3);
+      else if (e.key === '4') setVariant(4);
+      else if (e.key === '5') setVariant(5);
+      else if (e.key === '6') setVariant(6);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   return (
     <div className="flex flex-col gap-[28px]">
-      {/* Variant switcher */}
-      <div className="flex items-center gap-[8px]">
-        <span className="font-['Roboto',sans-serif] text-[12px] text-[#999] mr-[4px]" style={{ fontVariationSettings: "'wdth' 100" }}>
-          UI Variant:
-        </span>
-        {variantLabels.map((v) => (
-          <button
-            key={v.id}
-            onClick={() => setVariant(v.id)}
-            className={`px-[10px] py-[4px] rounded-[4px] font-['Roboto',sans-serif] text-[12px] transition-colors cursor-pointer ${
-              variant === v.id
-                ? 'bg-[#009ACE] text-white font-medium'
-                : 'bg-[#e8e8e8] text-[#555] hover:bg-[#ddd]'
-            }`}
-            style={{ fontVariationSettings: "'wdth' 100" }}
-          >
-            {v.label}
-          </button>
-        ))}
-      </div>
-
       {/* Description */}
       <div className="flex flex-col gap-[6px]">
         <p
@@ -530,6 +692,8 @@ function ScreenAppearancePage({ canvasBg, onCanvasBgChange }: { canvasBg: string
       {variant === 2 && <VariantDropdown canvasBg={canvasBg} onCanvasBgChange={onCanvasBgChange} />}
       {variant === 3 && <VariantCircles canvasBg={canvasBg} onCanvasBgChange={onCanvasBgChange} />}
       {variant === 4 && <VariantSwatches canvasBg={canvasBg} onCanvasBgChange={onCanvasBgChange} />}
+      {variant === 5 && <VariantCards3Col canvasBg={canvasBg} onCanvasBgChange={onCanvasBgChange} />}
+      {variant === 6 && <VariantLivePreview canvasBg={canvasBg} onCanvasBgChange={onCanvasBgChange} />}
     </div>
   );
 }
@@ -543,10 +707,10 @@ function VariantSwatches({ canvasBg, onCanvasBgChange }: { canvasBg: string; onC
           <button
             key={theme.color}
             onClick={() => onCanvasBgChange?.(theme.color)}
-            className={`relative w-[48px] h-[48px] rounded-[8px] border-[2.5px] transition-all cursor-pointer ${
+            className={`relative w-[48px] h-[48px] rounded-[8px] transition-all cursor-pointer ${
               isSelected
-                ? 'border-[#009ACE] shadow-[0_0_0_2px_rgba(0,154,206,0.25)] scale-110'
-                : 'border-[#d1d1d1] hover:border-[#999] hover:scale-105'
+                ? 'border-[2px] border-[#009ACE] shadow-[0_0_0_1px_rgba(0,154,206,0.3)] scale-105'
+                : 'border-[1px] border-[#e5e5e5] hover:border-[#d1d1d1] hover:scale-102'
             }`}
             style={{ backgroundColor: theme.color }}
             title={theme.label}
@@ -565,14 +729,20 @@ function VariantSwatches({ canvasBg, onCanvasBgChange }: { canvasBg: string; onC
 
 function DisplaySettingsPage({ canvasBg, onCanvasBgChange }: { canvasBg: string; onCanvasBgChange?: (color: string) => void }) {
   const [brightness, setBrightness] = useState(75);
-  const [variant, setVariant] = useState<1 | 2 | 3 | 4>(1);
+  const [variant, setVariant] = useState<1 | 2 | 3 | 4 | 5 | 6>(1);
 
-  const variantLabels = [
-    { id: 1 as const, label: 'Cards' },
-    { id: 2 as const, label: 'Dropdown' },
-    { id: 3 as const, label: 'Circles' },
-    { id: 4 as const, label: 'Swatches' },
-  ];
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === '1') setVariant(1);
+      else if (e.key === '2') setVariant(2);
+      else if (e.key === '3') setVariant(3);
+      else if (e.key === '4') setVariant(4);
+      else if (e.key === '5') setVariant(5);
+      else if (e.key === '6') setVariant(6);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   return (
     <div className="flex flex-col gap-[32px]">
@@ -620,38 +790,19 @@ function DisplaySettingsPage({ canvasBg, onCanvasBgChange }: { canvasBg: string;
           </p>
         </div>
 
-        {/* Variant switcher */}
-        <div className="flex items-center gap-[8px]">
-          <span className="font-['Roboto',sans-serif] text-[12px] text-[#999] mr-[4px]" style={{ fontVariationSettings: "'wdth' 100" }}>
-            UI Variant:
-          </span>
-          {variantLabels.map((v) => (
-            <button
-              key={v.id}
-              onClick={() => setVariant(v.id)}
-              className={`px-[10px] py-[4px] rounded-[4px] font-['Roboto',sans-serif] text-[12px] transition-colors cursor-pointer ${
-                variant === v.id
-                  ? 'bg-[#009ACE] text-white font-medium'
-                  : 'bg-[#e8e8e8] text-[#555] hover:bg-[#ddd]'
-              }`}
-              style={{ fontVariationSettings: "'wdth' 100" }}
-            >
-              {v.label}
-            </button>
-          ))}
-        </div>
-
         {/* Active variant */}
         {variant === 1 && <VariantCards canvasBg={canvasBg} onCanvasBgChange={onCanvasBgChange} />}
         {variant === 2 && <VariantDropdown canvasBg={canvasBg} onCanvasBgChange={onCanvasBgChange} />}
         {variant === 3 && <VariantCircles canvasBg={canvasBg} onCanvasBgChange={onCanvasBgChange} />}
         {variant === 4 && <VariantSwatches canvasBg={canvasBg} onCanvasBgChange={onCanvasBgChange} />}
+        {variant === 5 && <VariantCards3Col canvasBg={canvasBg} onCanvasBgChange={onCanvasBgChange} />}
+      {variant === 6 && <VariantLivePreview canvasBg={canvasBg} onCanvasBgChange={onCanvasBgChange} />}
       </div>
     </div>
   );
 }
 
-export default function SettingsModal({ onClose, canvasBg = '#D6E7F1', onCanvasBgChange, overlay = false }: SettingsModalProps) {
+export default function SettingsModal({ onClose, canvasBg = '#E0EDF4', onCanvasBgChange, overlay = false }: SettingsModalProps) {
   const [currentPage, setCurrentPage] = useState<SettingsPage>('main');
 
   const pageTitle = currentPage === 'main' ? 'Settings'

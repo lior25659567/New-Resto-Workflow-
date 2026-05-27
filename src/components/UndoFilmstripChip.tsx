@@ -51,7 +51,7 @@ function AcceptButton({ onClick, disabled }: { onClick: () => void; disabled: bo
         fontFamily: 'Roboto, sans-serif',
       }}
     >
-      Apply
+      Accept
     </button>
   );
 }

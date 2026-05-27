@@ -6,7 +6,7 @@ interface FloatingColorPickerProps {
 }
 
 const QUICK_COLORS = [
-  '#D6E7F1', '#BDD8EA', '#A3C4D9', '#E0F2FE',
+  '#E0EDF4', '#BDD8EA', '#A3C4D9', '#E0F2FE',
   '#C5EAD0', '#D1FAE5', '#F1F5F9', '#E2E8F0',
   '#FEF3C7', '#FECACA', '#1a1a2e', '#2d2d2d',
   '#1e293b', '#374151', '#111827', '#0F172A',
@@ -16,7 +16,7 @@ const QUICK_GRADIENTS = [
   'linear-gradient(135deg, #1a1a2e, #16213e)',
   'linear-gradient(135deg, #2d2d2d, #1a1a1a)',
   'linear-gradient(180deg, #e2e8f0, #cbd5e1)',
-  'linear-gradient(135deg, #D6E7F1, #a3c4d9)',
+  'linear-gradient(135deg, #E0EDF4, #a3c4d9)',
   'radial-gradient(circle, #C5EAD0, #a7f3d0)',
   'radial-gradient(circle, #fef3c7, #fed7aa)',
   'linear-gradient(180deg, #374151, #1f2937)',
@@ -63,10 +63,10 @@ export default function FloatingColorPicker({ currentColor, onColorChange }: Flo
 
   // Custom gradient builder state
   const [gradType, setGradType] = useState<GradType>('linear');
-  const [stop1, setStop1] = useState('#D6E7F1');
+  const [stop1, setStop1] = useState('#E0EDF4');
   const [stop2, setStop2] = useState('#a3c4d9');
   const [angle, setAngle] = useState(135);
-  const [hex1, setHex1] = useState('#D6E7F1');
+  const [hex1, setHex1] = useState('#E0EDF4');
   const [hex2, setHex2] = useState('#a3c4d9');
 
   const buildGradient = (type: GradType, s1: string, s2: string, a: number) =>
@@ -214,7 +214,7 @@ export default function FloatingColorPicker({ currentColor, onColorChange }: Flo
             >
               <input
                 type="color"
-                value={gradient ? '#D6E7F1' : currentColor}
+                value={gradient ? '#E0EDF4' : currentColor}
                 onChange={e => { onColorChange(e.target.value); setShowBuilder(false); }}
                 className="absolute inset-0 w-full h-full cursor-pointer opacity-0"
               />

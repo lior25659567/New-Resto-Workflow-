@@ -110,7 +110,7 @@ export default function UndoLabeledChip({
               color: hasHistory ? "#3E3D40" : "#B0B1B3",
             }}
           >
-            Apply
+            Accept
           </span>
         </button>
       </div>

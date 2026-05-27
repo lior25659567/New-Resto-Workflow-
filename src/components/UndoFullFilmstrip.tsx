@@ -181,7 +181,7 @@ export default function UndoFullFilmstrip({ past, future, currentJaw, canUndo, c
           }`}
           style={{ fontFamily: 'Roboto, sans-serif' }}
         >
-          Apply
+          Accept
         </button>
       </div>
     </motion.div>

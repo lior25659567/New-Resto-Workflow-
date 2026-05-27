@@ -1,3 +1,4 @@
+import '@react-three/fiber';
 import React, {
   useRef, useMemo, useState,
   useCallback, useEffect, useLayoutEffect,
@@ -5,9 +6,9 @@ import React, {
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { TrackballControls, Center, Environment } from '@react-three/drei';
 import * as THREE from 'three';
-import upperJawModel from '@/assets/3d-models/Upper Jaw .ply?url';
-import lowerJawModel from '@/assets/3d-models/Lower Jaw.ply?url';
-import biteModel from '@/assets/3d-models/Bite.ply?url';
+import upperJawModel  from '@/assets/3d-models/new 3d models /Upper.ply?url';
+import lowerJawModel  from '@/assets/3d-models/new 3d models /Lower.ply?url';
+import biteModel      from '@/assets/3d-models/new 3d models /Both Arches.ply?url';
 import { loadiTeroPLY } from './iTeroPLYLoader';
 import RevealMaterial from './RevealMaterial';
 import { useScanProgress } from './useScanProgress';

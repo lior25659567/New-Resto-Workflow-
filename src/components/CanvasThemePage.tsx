@@ -16,7 +16,7 @@ const DARK_PRESETS = [
 // ── Color palette swatches ───────────────────────────────────────────────────
 
 const PALETTE = [
-  { color: '#D6E7F1', label: 'Default Blue' },
+  { color: '#E0EDF4', label: 'Default' },
   { color: '#BDD8EA', label: 'Sky' },
   { color: '#A3C4D9', label: 'Steel Blue' },
   { color: '#E0F2FE', label: 'Ice' },
@@ -45,7 +45,7 @@ const GRADIENT_PRESETS = [
   { id: 'dark-gray',   label: 'Dark Gray',    value: 'linear-gradient(180deg, #374151, #1f2937)', desc: 'Professional dark' },
   { id: 'silver',      label: 'Silver',       value: 'linear-gradient(180deg, #e2e8f0, #cbd5e1)', desc: 'Soft gray' },
   { id: 'light-mist',  label: 'Light Mist',   value: 'linear-gradient(135deg, #f1f5f9, #e2e8f0)', desc: 'Barely-there gray' },
-  { id: 'ocean',       label: 'Ocean',        value: 'linear-gradient(135deg, #D6E7F1, #a3c4d9)', desc: 'Cool blue blend' },
+  { id: 'ocean',       label: 'Ocean',        value: 'linear-gradient(135deg, #E0EDF4, #a3c4d9)', desc: 'Cool blue blend' },
   { id: 'mint-fresh',  label: 'Mint Fresh',   value: 'linear-gradient(135deg, #C5EAD0, #a7f3d0)', desc: 'Soft green' },
   { id: 'warm-sand',   label: 'Warm Sand',    value: 'linear-gradient(135deg, #fef3c7, #fed7aa)', desc: 'Warm amber tone' },
   { id: 'rose-glow',   label: 'Rose Glow',    value: 'linear-gradient(135deg, #fecaca, #fda4af)', desc: 'Soft pink warmth' },
@@ -86,7 +86,7 @@ function isValidHex(v: string): boolean {
   return /^#[0-9a-fA-F]{6}$/.test(v.trim());
 }
 
-const DEFAULT_COLOR = '#D6E7F1';
+const DEFAULT_COLOR = '#E0EDF4';
 
 type Mode = 'solid' | 'gradient';
 type GradType = 'linear' | 'radial';
@@ -100,10 +100,10 @@ export default function CanvasThemePage({ onBackToHome, onApplyToFlow }: CanvasT
 
   // Gradient custom builder state
   const [gradType, setGradType] = useState<GradType>('linear');
-  const [gradStop1, setGradStop1] = useState('#D6E7F1');
+  const [gradStop1, setGradStop1] = useState('#E0EDF4');
   const [gradStop2, setGradStop2] = useState('#a3c4d9');
   const [gradAngle, setGradAngle] = useState(135);
-  const [hexStop1Input, setHexStop1Input] = useState('#D6E7F1');
+  const [hexStop1Input, setHexStop1Input] = useState('#E0EDF4');
   const [hexStop2Input, setHexStop2Input] = useState('#a3c4d9');
 
   // RGB inputs for solid mode
@@ -317,7 +317,7 @@ export default function CanvasThemePage({ onBackToHome, onApplyToFlow }: CanvasT
                 >
                   <input
                     type="color"
-                    value={isValidHex(hexInput) ? hexInput : previewBg.startsWith('#') ? previewBg : '#D6E7F1'}
+                    value={isValidHex(hexInput) ? hexInput : previewBg.startsWith('#') ? previewBg : '#E0EDF4'}
                     onChange={e => pickSolid(e.target.value)}
                     className="absolute inset-0 w-full h-full cursor-pointer opacity-0"
                   />
@@ -330,7 +330,7 @@ export default function CanvasThemePage({ onBackToHome, onApplyToFlow }: CanvasT
                   onChange={e => setHexInput(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') handleHexSubmit(); }}
                   onBlur={handleHexSubmit}
-                  placeholder="#D6E7F1"
+                  placeholder="#E0EDF4"
                   maxLength={7}
                   className="flex-1 px-3 py-2 rounded-lg text-sm font-mono outline-none transition-colors"
                   style={inputStyle}
@@ -466,7 +466,7 @@ export default function CanvasThemePage({ onBackToHome, onApplyToFlow }: CanvasT
                   onChange={e => setHexStop1Input(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') handleStop1HexSubmit(); }}
                   onBlur={handleStop1HexSubmit}
-                  placeholder="#D6E7F1"
+                  placeholder="#E0EDF4"
                   maxLength={7}
                   className="flex-1 px-3 py-2 rounded-lg text-sm font-mono outline-none"
                   style={inputStyle}

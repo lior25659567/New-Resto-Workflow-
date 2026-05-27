@@ -31,6 +31,7 @@ import UndoLabeledChip from "../components/UndoLabeledChip";
 import ScanGuidanceViewer from "../components/scan-guidance/ScanGuidanceViewer";
 import PrepCopilotExperience from "../components/prep-copilot/PrepCopilotExperience";
 import JawPlyViewer from "../components/jaw-viewer/JawPlyViewer";
+import { UndoToast, useUndoToast } from "../components/UndoToast";
 import imgEmergenceProfile from "figma:asset/59c5249493a5cf8767547ab4edc771958cf79908.png";
 import imgScanWand from "figma:asset/6aa095904da22b160466272b62feb75140332534.png";
 import implantUpperArchScan from "figma:asset/0739b756c08b73712f33f02a9c7bb00b11f87b89.png";
@@ -46,7 +47,7 @@ const crownLowerArchScan = "https://images.unsplash.com/photo-1687810953487-7b92
 function solidColor(bg: string): string {
   if (bg.startsWith('linear-gradient') || bg.startsWith('radial-gradient')) {
     const m = bg.match(/#[0-9a-fA-F]{6}/);
-    return m ? m[0] : '#D6E7F1';
+    return m ? m[0] : '#E0EDF4';
   }
   return bg;
 }
@@ -84,7 +85,7 @@ interface ScanPageMultiLayerProps {
   preTreatmentEnabled?: boolean;
   /** When true, shows the interactive 3D scan guidance (Full Ghost + Arrow) in the center instead of flat images */
   enableScanGuidance?: boolean;
-  /** Custom canvas background color (default: #D6E7F1) */
+  /** Custom canvas background color (default: #E0EDF4) */
   canvasBg?: string;
   /** Callback when canvas background changes from settings */
   onCanvasBgChange?: (color: string) => void;
@@ -92,7 +93,7 @@ interface ScanPageMultiLayerProps {
   isCanvasThemeMode?: boolean;
 }
 
-export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigateToMultiLayer, onNavigateToView, onNavigateToRx, onNavigateToSummary, scanType, onScannedLayersChange, onWorkflowChange, onBiteOptionsChange, toothTreatments, preTreatmentEnabled, enableScanGuidance, canvasBg = '#D6E7F1', onCanvasBgChange, isCanvasThemeMode = false }: ScanPageMultiLayerProps) {
+export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigateToMultiLayer, onNavigateToView, onNavigateToRx, onNavigateToSummary, scanType, onScannedLayersChange, onWorkflowChange, onBiteOptionsChange, toothTreatments, preTreatmentEnabled, enableScanGuidance, canvasBg = '#E0EDF4', onCanvasBgChange, isCanvasThemeMode = false }: ScanPageMultiLayerProps) {
   type WorkflowType = "fixed-restorative" | "implant-based" | "dentures" | "crown";
   const [workflow, setWorkflow] = useState<WorkflowType>(() => {
     // First, check toothTreatments to determine workflow based on assigned treatments
@@ -180,9 +181,15 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
   
   // Jaw scanning state - track which jaw is being viewed/scanned
   const [currentJaw, setCurrentJaw] = useState<'upper' | 'lower' | 'bite' | null>(null);
-  
+
   // Per-tab jaw scanned states: tracks which jaws have been scanned for each tab
   const [tabJawStates, setTabJawStates] = useState<Record<string, { upper: boolean; lower: boolean; bite: boolean }>>({});
+  
+  // Track which layer contains the reference bite (first bite scanned becomes the reference)
+  const [referenceBiteLayerId, setReferenceBiteLayerId] = useState<string | null>(null);
+  
+  // Toast for bite layer navigation
+  const biteLayerToast = useUndoToast();
   
   // Helper to get jaw state for a tab
   const getTabJawState = (tabId: string) => tabJawStates[tabId] || { upper: false, lower: false, bite: false };
@@ -222,6 +229,13 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
   const [isAnyToolActive, setIsAnyToolActive] = useState(false);
   // Monochrome mode (stone view) - controlled by ToolbarScan
   const [isMonochrome, setIsMonochrome] = useState(false);
+
+  const [showToothMarkers, setShowToothMarkers] = useState(false);
+  useEffect(() => {
+    const onDown = (e: KeyboardEvent) => { if (e.key.toLowerCase() === 't' && !e.repeat) setShowToothMarkers(v => !v); };
+    window.addEventListener('keydown', onDown);
+    return () => window.removeEventListener('keydown', onDown);
+  }, []);
 
   // Undo panel open state (panels render here at bottom-left, ToolbarScan controls open/close)
   const [isUndoPanelOpen, setIsUndoPanelOpen] = useState(false);
@@ -431,7 +445,41 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
   };
 
   const handleBiteOptionClick = (option: string) => {
-    // Always set jaw selector to 'bite' (both jaws) when any bite is clicked
+    // Check if we already have a reference bite layer (first layer where bite was scanned)
+    if (referenceBiteLayerId && referenceBiteLayerId !== activeTabId) {
+      // Find the reference layer that contains the bite
+      const referenceTab = tabs.find(tab => tab.id === referenceBiteLayerId);
+      
+      if (referenceTab) {
+        // Verify the reference tab actually has a bite scan
+        const referenceBiteState = getTabJawState(referenceBiteLayerId);
+        
+        if (referenceBiteState.bite) {
+          // Switch to the reference bite layer
+          setActiveTabId(referenceBiteLayerId);
+          setCurrentJaw('bite');
+          setActiveBiteOptions([option]);
+          
+          // Show Ogilvy-style toast: benefit-focused, clear, specific
+          // Promise: "Navigate instantly to your bite scan" 
+          // Proof: Shows which layer contains the bite
+          // News: Uses action language that conveys completion
+          biteLayerToast.show(
+            `Bite found in ${referenceTab.label} — switched automatically`
+          );
+          
+          return;
+        } else {
+          // Reference layer lost its bite scan - reset reference
+          setReferenceBiteLayerId(null);
+        }
+      } else {
+        // Reference tab no longer exists - reset reference
+        setReferenceBiteLayerId(null);
+      }
+    }
+    
+    // Normal bite selection behavior
     setCurrentJaw('bite');
     setIsScanning(false);
     setScanProgress(0);
@@ -577,6 +625,11 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
                 `Scanned ${currentJaw} jaw`
               );
               setTabJawScanned(activeTabId, currentJaw);
+
+              // Set reference bite layer (first bite scan becomes the reference)
+              if (currentJaw === 'bite' && !referenceBiteLayerId) {
+                setReferenceBiteLayerId(activeTabId);
+              }
 
               // Mark tab as having scan data
               setScannedTabs(prev => new Set([...prev, activeTabId]));
@@ -1004,6 +1057,8 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
               undoPanelCloseRef.current = closeHandler ?? null;
               if (isOpen) {
                 setCurrentJaw((prev) => prev ?? 'upper');
+              } else {
+                setIsMonochrome(false);
               }
             }}
             undoState={{
@@ -1017,6 +1072,11 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
             onUndo={handleUndoAction}
             undoVariant={undoVariant}
           />
+        </div>
+
+        {/* Bite Layer Navigation Toast */}
+        <div className="absolute right-4 top-20 z-50">
+          <UndoToast message={biteLayerToast.message} visible={biteLayerToast.visible} />
         </div>
 
         {/* Undo variant switcher — draggable, toggle with 'E' key */}
@@ -1077,34 +1137,6 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
           </motion.div>
         )}
 
-        {/* Wand Scan Button - Right side, bottom aligned (hidden in scan guidance mode, Copilot, canvas theme mode, and toggled with E when undo active) */}
-        {!enableScanGuidance && !isCopilotActive && !isCanvasThemeMode && !(isUndoPanelOpen && !isSwitcherVisible) && (
-          <div className="absolute right-8 bottom-8 z-50">
-            <button
-              onClick={handleWandScan}
-              disabled={!currentJaw || isScanning || (currentJaw && getTabJawState(activeTabId)[currentJaw] && !activeBiteOptions.includes('Left lateral'))}
-              className={`flex flex-col items-end justify-end gap-2 rounded-md transition-all ${
-                !currentJaw || isScanning || (currentJaw && getTabJawState(activeTabId)[currentJaw] && !activeBiteOptions.includes('Left lateral'))
-                  ? 'opacity-20 cursor-not-allowed bg-transparent'
-                  : 'bg-transparent hover:bg-white/10 cursor-pointer'
-              }`}
-              title={
-                !currentJaw
-                  ? 'Select a jaw first'
-                  : currentJaw && getTabJawState(activeTabId)[currentJaw] && !activeBiteOptions.includes('Left lateral')
-                  ? 'Already scanned'
-                  : 'Click to scan with wand'
-              }
-            >
-              <div className="flex items-end justify-center">
-                <img src={imgScanWand} alt="Scan wand" className="w-[280px] object-contain" />
-              </div>
-              <span className="font-['Roboto',sans-serif] font-normal text-[12px] text-[#3e3d40]/70 whitespace-nowrap self-center">
-                {isScanning ? 'Scanning...' : 'Scan'}
-              </span>
-            </button>
-          </div>
-        )}
         
         {/* Left side - JawSelector - stays in fixed position (hidden when Copilot active) */}
         <div
@@ -1162,17 +1194,47 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
               />
             </motion.div>
             
-            {/* Jaw Label - shows current jaw selection */}
+            {/* Jaw Scan Button */}
             <div className="mt-[16px] w-full">
-              <div className="bg-white relative rounded-[4px]" data-name="Button">
-                <div className="flex flex-row items-center justify-center">
-                  <div className="content-stretch flex items-center justify-center px-[16px] py-[12px] relative w-full">
-                    <p className="flex-1 font-['Roboto',sans-serif] font-normal leading-[28px] relative text-[#3e3d40] text-[18px] text-center whitespace-pre-wrap" style={{ fontVariationSettings: "'wdth' 100" }}>
-                      {activeBiteOptions.length > 0 ? getBiteDisplayName(activeBiteOptions[0]) : currentJaw === 'bite' ? 'Both' : currentJaw === 'lower' ? 'Lower' : 'Upper'}
-                    </p>
-                  </div>
-                </div>
-              </div>
+              {(() => {
+                const jawState = getTabJawState(activeTabId);
+                const isAlreadyScanned = !!(currentJaw && jawState[currentJaw as keyof typeof jawState] && !activeBiteOptions.includes('Left lateral'));
+                const isDisabled = !currentJaw || isScanning || isAlreadyScanned;
+                const jawLabel = activeBiteOptions.length > 0
+                  ? getBiteDisplayName(activeBiteOptions[0])
+                  : currentJaw === 'bite' ? 'Both' : currentJaw === 'lower' ? 'Lower' : 'Upper';
+                return (
+                  <button
+                    onClick={handleWandScan}
+                    disabled={isDisabled}
+                    className={`relative w-full rounded-[4px] overflow-hidden transition-all group ${
+                      !isDisabled ? 'cursor-pointer' : 'cursor-default'
+                    }`}
+                  >
+                    {/* Background */}
+                    <div className="absolute inset-0 rounded-[4px] bg-white" />
+                    {/* Scan line sweeping top → bottom */}
+                    <AnimatePresence>
+                      {isScanning && (
+                        <motion.div
+                          key="scan-line"
+                          className="absolute left-0 right-0 h-[2px] bg-[#009ACE]/70 z-10"
+                          style={{ boxShadow: '0 0 6px 2px rgba(0,154,206,0.4)' }}
+                          initial={{ top: '0%' }}
+                          animate={{ top: ['0%', '100%', '0%'] }}
+                          transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
+                        />
+                      )}
+                    </AnimatePresence>
+                    {/* Row: jaw name centered */}
+                    <div className="relative flex flex-row items-center justify-center px-[16px] py-[12px]">
+                      <p className="font-['Roboto',sans-serif] font-normal leading-[28px] text-[#3e3d40] text-[18px] text-center" style={{ fontVariationSettings: "'wdth' 100" }}>
+                        {jawLabel}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })()}
             </div>
           </div>
         </div>
@@ -1330,6 +1392,8 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
                   jaw={currentJaw || 'upper'}
                   monochrome={isMonochrome}
                   revealStep={(isUndoPanelOpen || hasAppliedUndoState) ? revealStep : TOTAL_REVEAL_STEPS}
+                  showGhost={isUndoPanelOpen}
+                  showMarkers={showToothMarkers}
                 />
               </motion.div>
             );

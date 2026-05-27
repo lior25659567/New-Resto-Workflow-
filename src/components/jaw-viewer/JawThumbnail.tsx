@@ -1,12 +1,13 @@
+import '@react-three/fiber';
 import { memo, useMemo, Suspense } from 'react';
 import { Canvas, useLoader } from '@react-three/fiber';
 import { Center } from '@react-three/drei';
 import { PLYLoader } from 'three-stdlib';
 import * as THREE from 'three';
 
-import upperJawUrl from '@/assets/3d-models/Upper Jaw .ply?url';
-import lowerJawUrl from '@/assets/3d-models/Lower Jaw.ply?url';
-import biteUrl from '@/assets/3d-models/Bite.ply?url';
+import upperJawUrl   from '@/assets/3d-models/new 3d models /Upper.ply?url';
+import lowerJawUrl   from '@/assets/3d-models/new 3d models /Lower.ply?url';
+import bothArchesUrl from '@/assets/3d-models/new 3d models /Both Arches.ply?url';
 
 const STONE_COLOR = new THREE.Color(0xd4d0c8);
 
@@ -46,7 +47,7 @@ interface JawThumbnailProps {
 }
 
 function JawThumbnailInner({ jaw, rotationY = 0, opacity = 1, size = 64, className }: JawThumbnailProps) {
-  const url = jaw === 'upper' ? upperJawUrl : jaw === 'lower' ? lowerJawUrl : biteUrl;
+  const url = jaw === 'upper' ? upperJawUrl : jaw === 'lower' ? lowerJawUrl : bothArchesUrl;
 
   return (
     <div className={className} style={{ width: size, height: size }}>

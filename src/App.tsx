@@ -47,7 +47,7 @@ export default function App() {
   const [toothSpecifications, setToothSpecifications] = useState<{ [tooth: string]: { [key: string]: string } }>({});
   const [selectedBiteOptions, setSelectedBiteOptions] = useState<string[]>([]);
   const [preTreatmentEnabled, setPreTreatmentEnabled] = useState(false);
-  const [canvasBg, setCanvasBg] = useState('#D6E7F1');
+  const [canvasBg, setCanvasBg] = useState('#E0EDF4');
   const [isCanvasThemeMode, setIsCanvasThemeMode] = useState(false);
 
   // Reset everything and go home — canvas always resets to default
@@ -55,7 +55,7 @@ export default function App() {
     setCurrentView('home');
     setFlowStep('search');
     setSelectedPatient(null);
-    setCanvasBg('#D6E7F1');
+    setCanvasBg('#E0EDF4');
     setIsCanvasThemeMode(false);
   };
 

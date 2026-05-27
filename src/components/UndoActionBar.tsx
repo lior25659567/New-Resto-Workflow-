@@ -81,14 +81,14 @@ export default function UndoActionBar({ canUndo, canRedo, onUndo, onRedo, onAcce
         </button>
       </div>
 
-      {/* Apply */}
+      {/* Accept */}
       <div className="bg-white w-full border-t border-[#e0e0e0]">
         <button
           onClick={onAccept}
           className="w-full flex items-center justify-center gap-2 py-3.5 text-[#009ACE] font-medium text-[15px] hover:bg-[#f0faff] active:bg-[#e0f4ff] transition-colors rounded-b-[4px]"
         >
           <CheckIcon />
-          Apply changes
+          Accept changes
         </button>
       </div>
     </motion.div>

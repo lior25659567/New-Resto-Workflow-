@@ -38,6 +38,8 @@ interface PLYHeader {
   vertexProps: ScalarProp[];
   faceProps: Prop[];
   headerLength: number;
+  hasVertexColors: boolean;
+  hasNormals: boolean;
 }
 
 function parseHeader(buffer: ArrayBuffer): PLYHeader {
@@ -70,7 +72,9 @@ function parseHeader(buffer: ArrayBuffer): PLYHeader {
     }
   }
 
-  return { vertexCount, faceCount, vertexProps, faceProps, headerLength };
+  const hasVertexColors = vertexProps.some(p => p.name === 'red');
+  const hasNormals = vertexProps.some(p => p.name === 'nx');
+  return { vertexCount, faceCount, vertexProps, faceProps, headerLength, hasVertexColors, hasNormals };
 }
 
 // ── Binary parse — positions, normals, index buffer, and per-vertex UV sums ───
@@ -79,8 +83,9 @@ interface ParseResult {
   positions: Float32Array;
   normals: Float32Array;
   indices: Uint32Array;
-  uvSums: Float64Array;   // [u, v, u, v, ...] per vertex — accumulated UV sum
-  uvCounts: Uint32Array;  // how many faces contributed UVs for each vertex
+  uvSums: Float64Array;
+  uvCounts: Uint32Array;
+  vertexColors: Float32Array | null;  // non-null when PLY has red/green/blue vertex props
 }
 
 function parsePLYData(buffer: ArrayBuffer, header: PLYHeader): ParseResult {
@@ -89,17 +94,23 @@ function parsePLYData(buffer: ArrayBuffer, header: PLYHeader): ParseResult {
 
   const positions = new Float32Array(header.vertexCount * 3);
   const normals   = new Float32Array(header.vertexCount * 3);
+  const rawColors = header.hasVertexColors ? new Float32Array(header.vertexCount * 3) : null;
 
   for (let i = 0; i < header.vertexCount; i++) {
     for (const prop of header.vertexProps) {
       const size = typeSize(prop.scalarType);
       const val  = readScalar(view, off, prop.scalarType);
-      if      (prop.name === 'x')  positions[i * 3]     = val;
-      else if (prop.name === 'y')  positions[i * 3 + 1] = val;
-      else if (prop.name === 'z')  positions[i * 3 + 2] = val;
-      else if (prop.name === 'nx') normals[i * 3]        = val;
-      else if (prop.name === 'ny') normals[i * 3 + 1]   = val;
-      else if (prop.name === 'nz') normals[i * 3 + 2]   = val;
+      if      (prop.name === 'x')     positions[i * 3]         = val;
+      else if (prop.name === 'y')     positions[i * 3 + 1]     = val;
+      else if (prop.name === 'z')     positions[i * 3 + 2]     = val;
+      else if (prop.name === 'nx')    normals[i * 3]            = val;
+      else if (prop.name === 'ny')    normals[i * 3 + 1]        = val;
+      else if (prop.name === 'nz')    normals[i * 3 + 2]        = val;
+      else if (rawColors) {
+        if      (prop.name === 'red')   rawColors[i * 3]     = val / 255;
+        else if (prop.name === 'green') rawColors[i * 3 + 1] = val / 255;
+        else if (prop.name === 'blue')  rawColors[i * 3 + 2] = val / 255;
+      }
       off += size;
     }
   }
@@ -170,6 +181,7 @@ function parsePLYData(buffer: ArrayBuffer, header: PLYHeader): ParseResult {
     indices: new Uint32Array(idxList),
     uvSums,
     uvCounts,
+    vertexColors: rawColors,
   };
 }
 
@@ -197,43 +209,72 @@ function sampleTexture(data: Uint8ClampedArray, w: number, h: number, u: number,
 
 // ── Main loader ───────────────────────────────────────────────────────────────
 
-export async function loadJawPLYBaked(plyUrl: string, textureUrl: string): Promise<THREE.BufferGeometry> {
-  const [buffer, imgData] = await Promise.all([
-    fetch(plyUrl).then(r => r.arrayBuffer()),
-    loadImageData(textureUrl),
-  ]);
-
+export async function loadJawPLYBaked(plyUrl: string, textureUrl = ''): Promise<THREE.BufferGeometry> {
+  const buffer = await fetch(plyUrl).then(r => r.arrayBuffer());
   const header = parseHeader(buffer);
   const parsed = parsePLYData(buffer, header);
 
-  // Bake per-vertex colors from texture, with same enhancement as scan page
   const colors = new Float32Array(header.vertexCount * 3);
-  for (let i = 0; i < header.vertexCount; i++) {
-    let r: number, g: number, b: number;
-    if (parsed.uvCounts[i] === 0) {
-      r = 0.85; g = 0.80; b = 0.75;
-    } else {
-      // uvSums stores the single assigned UV directly (first-assignment-wins, no averaging)
-      const u = parsed.uvSums[i * 2];
-      const v = parsed.uvSums[i * 2 + 1];
-      [r, g, b] = sampleTexture(imgData.data, imgData.width, imgData.height, u, v);
-      const avg = (r + g + b) / 3;
-      r = ((r - avg) * 1.4 + avg) * 1.35 * 0.65;
-      g = ((g - avg) * 1.4 + avg) * 1.35 * 0.65;
-      b = ((b - avg) * 1.4 + avg) * 1.35 * 0.65;
-      r = Math.min(1, Math.max(0, r));
-      g = Math.min(1, Math.max(0, g));
-      b = Math.min(1, Math.max(0, b));
+
+  if (parsed.vertexColors) {
+    // PLY has embedded RGBA vertex colors (e.g. Blender export) — luminance-aware enhancement.
+    // High-luminance vertices (teeth): gentle warmth, no blowout.
+    // Low-luminance vertices (gingiva): boost pink saturation for natural soft-tissue appearance.
+    for (let i = 0; i < header.vertexCount; i++) {
+      let r = parsed.vertexColors[i * 3];
+      let g = parsed.vertexColors[i * 3 + 1];
+      let b = parsed.vertexColors[i * 3 + 2];
+      const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      const isToothRegion = lum > 0.55;
+      const satMul = isToothRegion ? 1.2 : 1.65;
+      const bri    = isToothRegion ? 1.0 : 0.97;
+      r = Math.min(1, Math.max(0, ((r - lum) * satMul + lum) * bri * 1.04));
+      g = Math.min(1, Math.max(0, ((g - lum) * satMul + lum) * bri));
+      b = Math.min(1, Math.max(0, ((b - lum) * satMul + lum) * bri * 0.94));
+      colors[i * 3]     = r;
+      colors[i * 3 + 1] = g;
+      colors[i * 3 + 2] = b;
     }
-    colors[i * 3] = r; colors[i * 3 + 1] = g; colors[i * 3 + 2] = b;
+  } else if (textureUrl) {
+    // Legacy iTero export: bake per-vertex colors from texture atlas
+    const imgData = await loadImageData(textureUrl);
+    for (let i = 0; i < header.vertexCount; i++) {
+      let r: number, g: number, b: number;
+      if (parsed.uvCounts[i] === 0) {
+        r = 0.85; g = 0.80; b = 0.75;
+      } else {
+        const u = parsed.uvSums[i * 2];
+        const v = parsed.uvSums[i * 2 + 1];
+        [r, g, b] = sampleTexture(imgData.data, imgData.width, imgData.height, u, v);
+        const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        const isToothRegion = lum > 0.55;
+        const satMul = isToothRegion ? 1.2 : 1.65;
+        const bri    = isToothRegion ? 1.0 : 0.97;
+        r = Math.min(1, Math.max(0, ((r - lum) * satMul + lum) * bri * 1.04));
+        g = Math.min(1, Math.max(0, ((g - lum) * satMul + lum) * bri));
+        b = Math.min(1, Math.max(0, ((b - lum) * satMul + lum) * bri * 0.94));
+      }
+      colors[i * 3] = r; colors[i * 3 + 1] = g; colors[i * 3 + 2] = b;
+    }
+  } else {
+    colors.fill(0.82);
   }
 
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(parsed.positions, 3));
-  geo.setAttribute('normal',   new THREE.BufferAttribute(parsed.normals,   3));
-  geo.setAttribute('color',    new THREE.BufferAttribute(colors, 3));
+  if (header.hasNormals) {
+    geo.setAttribute('normal', new THREE.BufferAttribute(parsed.normals, 3));
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   geo.setIndex(new THREE.BufferAttribute(parsed.indices, 1));
+
+  geo.computeBoundingBox();
+  const originalCenter = new THREE.Vector3();
+  geo.boundingBox!.getCenter(originalCenter);
+  geo.userData.originalCenter = originalCenter;
+
   geo.center();
+  if (!header.hasNormals) geo.computeVertexNormals();
 
   return geo;
 }
@@ -242,7 +283,7 @@ export async function loadJawPLYBaked(plyUrl: string, textureUrl: string): Promi
 
 const _cache = new Map<string, THREE.BufferGeometry | Promise<THREE.BufferGeometry>>();
 
-export function useJawGeo(plyUrl: string, textureUrl: string): THREE.BufferGeometry {
+export function useJawGeo(plyUrl: string, textureUrl = ''): THREE.BufferGeometry {
   const key = `${plyUrl}|${textureUrl}`;
   const entry = _cache.get(key);
   if (entry instanceof THREE.BufferGeometry) return entry;

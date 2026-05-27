@@ -31,12 +31,12 @@ interface MultiLayerViewProps {
   scannedLayers?: ScannedLayer[];
   scanType?: string | null;
   selectedBiteOptions?: string[];
-  /** Custom canvas background color (default: #D6E7F1) */
+  /** Custom canvas background color (default: #E0EDF4) */
   canvasBg?: string;
   onCanvasBgChange?: (color: string) => void;
 }
 
-export default function MultiLayerView({ patient, onBack, onHome, onNavigateToMultiLayer, onNavigateToView, onNavigateToSummary, onNavigateToRx, scannedLayers, scanType, selectedBiteOptions, canvasBg = '#D6E7F1', onCanvasBgChange }: MultiLayerViewProps) {
+export default function MultiLayerView({ patient, onBack, onHome, onNavigateToMultiLayer, onNavigateToView, onNavigateToSummary, onNavigateToRx, scannedLayers, scanType, selectedBiteOptions, canvasBg = '#E0EDF4', onCanvasBgChange }: MultiLayerViewProps) {
   // Determine if this is a crown workflow
   const isCrownWorkflow = scanType === 'crown';
   const isImplantWorkflow = scanType === 'implantPlanning';
@@ -181,6 +181,17 @@ export default function MultiLayerView({ patient, onBack, onHome, onNavigateToMu
   }, [isPrepQCActive]);
 
   // Jaw position adjustment — Both view
+  const [showToothMarkers, setShowToothMarkers] = useState(false);
+  
+  // Tooth markers are controlled independently by 'T' key, not by heatmap tools
+
+  // 'T' key also toggles tooth markers
+  useEffect(() => {
+    const onDown = (e: KeyboardEvent) => { if (e.key.toLowerCase() === 't' && !e.repeat) setShowToothMarkers(v => !v); };
+    window.addEventListener('keydown', onDown);
+    return () => window.removeEventListener('keydown', onDown);
+  }, []);
+
   const [isJawMoveMode, setIsJawMoveMode] = useState(false);
   const [upperJawPos, setUpperJawPos] = useState<[number, number, number]>([...DEFAULT_BOTH_UPPER_POS]);
   const [lowerJawPos, setLowerJawPos] = useState<[number, number, number]>([...DEFAULT_BOTH_LOWER_POS]);
@@ -423,7 +434,7 @@ export default function MultiLayerView({ patient, onBack, onHome, onNavigateToMu
               alpha: true,
               preserveDrawingBuffer: true,
               toneMapping: THREE.ACESFilmicToneMapping,
-              toneMappingExposure: 0.7,
+              toneMappingExposure: 0.85,
             }}
             style={{ touchAction: 'none', background: 'transparent' }}
             dpr={typeof window !== 'undefined' ? window.devicePixelRatio : 1}
@@ -438,9 +449,9 @@ export default function MultiLayerView({ patient, onBack, onHome, onNavigateToMu
                 trimSelectedLayer={trimSelectedLayer}
                 monochrome={isMonochromeActive}
                 isOcclusogramActive={activeTool === 2}
-                bothUpperPos={upperJawPos}
-                bothLowerPos={lowerJawPos}
+                isPrepReductionActive={activeTool === 4}
                 singleUpperPos={upperSinglePos}
+                showToothMarkers={showToothMarkers}
               />
             </Suspense>
           </Canvas>

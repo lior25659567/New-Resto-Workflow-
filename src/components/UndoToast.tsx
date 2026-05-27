@@ -55,7 +55,7 @@ export function UndoApplyBadge({ hasHistory, onApply }: UndoApplyBadgeProps) {
           style={{ fontFamily: 'Roboto, sans-serif' }}
         >
           <CheckIcon />
-          Apply changes
+          Accept changes
         </motion.button>
       )}
     </AnimatePresence>

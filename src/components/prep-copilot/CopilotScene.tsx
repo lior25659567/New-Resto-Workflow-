@@ -1,10 +1,11 @@
-import React, { useRef, useMemo, useEffect, createContext, useContext } from 'react';
+import '@react-three/fiber';
+import React, { useRef, useMemo, createContext, useContext } from 'react';
 import { useLoader, useFrame } from '@react-three/fiber';
-import { TrackballControls, Environment } from '@react-three/drei';
+import { OrbitControls, Environment } from '@react-three/drei';
 import { PLYLoader } from 'three-stdlib';
 import * as THREE from 'three';
 import hdrUrl from '@/assets/lebombo_1k.hdr?url';
-import lowerJawUrl from '@/assets/3d-models/Lower Jaw.ply?url';
+import { jawModels } from '../jaw-viewer/jawModelPaths';
 
 const MESH_SCALE = 0.055;
 const MESH_ROTATION: [number, number, number] = [0.1, -0.4, 0];
@@ -71,11 +72,12 @@ interface CopilotSceneProps {
 }
 
 export default function CopilotScene({ children }: CopilotSceneProps) {
-  const rawGeo = useLoader(PLYLoader, lowerJawUrl);
+  const rawGeo = useLoader(PLYLoader, jawModels.lower_treatment);
   const geometry = usePreparedGeometry(rawGeo);
   const bounds = useMemo(() => computeBounds(geometry), [geometry]);
-
   const modelCtx = useMemo(() => ({ bounds, geometry }), [bounds, geometry]);
+  const controlsRef = useRef<any>(null);
+  useFrame(() => { controlsRef.current?.update(); });
 
   return (
     <>
