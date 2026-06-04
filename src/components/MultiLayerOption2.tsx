@@ -41,9 +41,12 @@ interface MultiLayerOption2Props {
   prepQCVariant?: 1 | 2 | 3; // Which Prep QC panel variant to show
   trimMode?: boolean; // When Trim tool is active
   onTrimLayerChange?: (layer: 'pre-treatment' | 'treatment') => void;
+  occlusogramMode?: boolean; // When Occlusogram tool is active
+  onOcclusogramLayerChange?: (layer: 'pre-treatment' | 'treatment' | 'additional') => void;
   onReferenceScanChange?: (scan: 'pre-treatment' | 'additional') => void;
   selectedBiteOptions?: string[]; // Bite options from scan page
   onBiteClick?: (bite: string) => void; // Callback when a bite is clicked
+  isDentures?: boolean;
 }
 
 interface SliderControlProps {
@@ -157,7 +160,7 @@ function TrimLayerItem({ label, isActive, onClick }: { label: string; isActive: 
   );
 }
 
-export function MultiLayerOption2({ onViewChange, onSliderChange, onLayerStatesChange, isReviewToolActive, scannedLayers, isViewTab, simplifiedMode, selectedView, prepQCMode, prepQCVariant = 1, trimMode, onTrimLayerChange, onReferenceScanChange, selectedBiteOptions, onBiteClick }: MultiLayerOption2Props) {
+export function MultiLayerOption2({ onViewChange, onSliderChange, onLayerStatesChange, isReviewToolActive, scannedLayers, isViewTab, simplifiedMode, selectedView, prepQCMode, prepQCVariant = 1, trimMode, onTrimLayerChange, occlusogramMode, onOcclusogramLayerChange, onReferenceScanChange, selectedBiteOptions, onBiteClick, isDentures = false }: MultiLayerOption2Props) {
   // Determine initial view based on scanned layers
   const getInitialView = () => {
     if (!scannedLayers || scannedLayers.length === 0) return 2;
@@ -210,8 +213,28 @@ export function MultiLayerOption2({ onViewChange, onSliderChange, onLayerStatesC
   const [pretreatmentUpper2Mode, setPretreatmentUpper2Mode] = useState<SliderMode>('default');
   const [pretreatmentLower2Mode, setPretreatmentLower2Mode] = useState<SliderMode>('default');
 
+  // Per-layer slider state for dentures (keyed by layer id)
+  type LayerSliderState = { upper: number; lower: number; upperMode: SliderMode; lowerMode: SliderMode };
+  const [layerSliderStates, setLayerSliderStates] = useState<Record<string, LayerSliderState>>(() => {
+    const init: Record<string, LayerSliderState> = {};
+    scannedLayers?.forEach(l => {
+      init[l.id] = { upper: 100, lower: 100, upperMode: 'default', lowerMode: 'default' };
+    });
+    return init;
+  });
+
+  const getLayerSlider = (id: string): LayerSliderState =>
+    layerSliderStates[id] ?? { upper: 100, lower: 100, upperMode: 'default', lowerMode: 'default' };
+
+  const setLayerSlider = (id: string, patch: Partial<LayerSliderState>) => {
+    setLayerSliderStates(prev => ({ ...prev, [id]: { ...getLayerSlider(id), ...patch } }));
+  };
+
   // Trim tool - selected layer
   const [selectedTrimLayer, setSelectedTrimLayer] = useState<'pre-treatment' | 'treatment'>('treatment');
+
+  // Occlusogram tool - selected layer
+  const [selectedOcclusogramLayer, setSelectedOcclusogramLayer] = useState<'pre-treatment' | 'treatment' | 'additional'>('treatment');
 
   // Prep QC - selected reference scan
   const [selectedReferenceScan, setSelectedReferenceScan] = useState<'pre-treatment' | 'additional'>('pre-treatment');
@@ -542,6 +565,40 @@ export function MultiLayerOption2({ onViewChange, onSliderChange, onLayerStatesC
                   />
                 )}
               </div>
+            ) : occlusogramMode ? (
+              // Occlusogram mode - show selectable layer items (same UI as trim mode)
+              <div className="flex flex-col gap-[16px] p-[8px]">
+                {showPretreatment && (
+                  <TrimLayerItem
+                    label="Pre-treatment"
+                    isActive={selectedOcclusogramLayer === 'pre-treatment'}
+                    onClick={() => {
+                      setSelectedOcclusogramLayer('pre-treatment');
+                      if (onOcclusogramLayerChange) onOcclusogramLayerChange('pre-treatment');
+                    }}
+                  />
+                )}
+                {showTreatment && (
+                  <TrimLayerItem
+                    label="Treatment scan"
+                    isActive={selectedOcclusogramLayer === 'treatment'}
+                    onClick={() => {
+                      setSelectedOcclusogramLayer('treatment');
+                      if (onOcclusogramLayerChange) onOcclusogramLayerChange('treatment');
+                    }}
+                  />
+                )}
+                {showAdditional && (
+                  <TrimLayerItem
+                    label="Additional scan"
+                    isActive={selectedOcclusogramLayer === 'additional'}
+                    onClick={() => {
+                      setSelectedOcclusogramLayer('additional');
+                      if (onOcclusogramLayerChange) onOcclusogramLayerChange('additional');
+                    }}
+                  />
+                )}
+              </div>
             ) : prepQCMode ? (
               // Prep QC mode — 3 variants controlled by external prepQCVariant prop
               <>
@@ -832,10 +889,46 @@ export function MultiLayerOption2({ onViewChange, onSliderChange, onLayerStatesC
                   </div>
                 )}
 
+                {/* Dentures: render each scanned layer individually */}
+                {isDentures && scannedLayers?.filter(l => l.type !== 'bite').map(layer => {
+                  const hasUpper = layer.scannedJaws.upper;
+                  const hasLower = layer.scannedJaws.lower;
+                  const visible = (currentView === 0 && hasUpper) || (currentView === 1 && hasLower) || (currentView === 2 && (hasUpper || hasLower));
+                  if (!visible) return null;
+                  const s = getLayerSlider(layer.id);
+                  return (
+                    <div key={layer.id} className="mb-3 rounded-lg p-3 bg-transparent border-2 border-transparent">
+                      <h2 className="mb-3">{layer.label}</h2>
+                      <div className="space-y-3">
+                        {(currentView === 0 || currentView === 2) && hasUpper && (
+                          <SliderControl
+                            label="∩"
+                            value={s.upper}
+                            onChange={val => setLayerSlider(layer.id, { upper: val })}
+                            mode={s.upperMode}
+                            onToggleMode={() => setLayerSlider(layer.id, { upperMode: cycleMode(s.upperMode) })}
+                            isLower={false}
+                          />
+                        )}
+                        {(currentView === 1 || currentView === 2) && hasLower && (
+                          <SliderControl
+                            label="∪"
+                            value={s.lower}
+                            onChange={val => setLayerSlider(layer.id, { lower: val })}
+                            mode={s.lowerMode}
+                            onToggleMode={() => setLayerSlider(layer.id, { lowerMode: cycleMode(s.lowerMode) })}
+                            isLower={true}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+
                 {/* Pre-treatment Section */}
-                {showPretreatment && (
-                  (currentView === 0 && pretreatmentHasUpper) || 
-                  (currentView === 1 && pretreatmentHasLower) || 
+                {!isDentures && showPretreatment && (
+                  (currentView === 0 && pretreatmentHasUpper) ||
+                  (currentView === 1 && pretreatmentHasLower) ||
                   (currentView === 2 && (pretreatmentHasUpper || pretreatmentHasLower))
                 ) && (
                   <div 
@@ -932,9 +1025,9 @@ export function MultiLayerOption2({ onViewChange, onSliderChange, onLayerStatesC
                 )}
                 
                 {/* Treatment Scan Section */}
-                {showTreatment && (
-                  (currentView === 0 && treatmentHasUpper) || 
-                  (currentView === 1 && treatmentHasLower) || 
+                {!isDentures && showTreatment && (
+                  (currentView === 0 && treatmentHasUpper) ||
+                  (currentView === 1 && treatmentHasLower) ||
                   (currentView === 2 && (treatmentHasUpper || treatmentHasLower))
                 ) && (
                   <div 
@@ -1031,9 +1124,9 @@ export function MultiLayerOption2({ onViewChange, onSliderChange, onLayerStatesC
                 )}
                 
                 {/* Additional Scan Section */}
-                {showAdditional && (
-                  (currentView === 0 && additionalHasUpper) || 
-                  (currentView === 1 && additionalHasLower) || 
+                {!isDentures && showAdditional && (
+                  (currentView === 0 && additionalHasUpper) ||
+                  (currentView === 1 && additionalHasLower) ||
                   (currentView === 2 && (additionalHasUpper || additionalHasLower))
                 ) && (
                   <div 

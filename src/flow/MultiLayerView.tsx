@@ -114,6 +114,8 @@ export default function MultiLayerView({ patient, onBack, onHome, onNavigateToMu
   // Trim (tool 5) is special - shows layer selection
   const isTrimActive = activeTool === 5;
   const [trimSelectedLayer, setTrimSelectedLayer] = useState<'pre-treatment' | 'treatment'>('treatment');
+  const isOcclusogramActive = activeTool === 2;
+  const [occlusogramSelectedLayer, setOcclusogramSelectedLayer] = useState<'pre-treatment' | 'treatment' | 'additional'>('treatment');
   
   // Initialize layer states with default values based on scannedLayers
   const [layerStates, setLayerStates] = useState<{
@@ -270,7 +272,6 @@ export default function MultiLayerView({ patient, onBack, onHome, onNavigateToMu
         onNavigateToSummary={onNavigateToSummary}
         canvasBg={canvasBg}
         onCanvasBgChange={onCanvasBgChange}
-        settingsOverlay
       />
 
       {/* Main content area */}
@@ -283,14 +284,17 @@ export default function MultiLayerView({ patient, onBack, onHome, onNavigateToMu
             onLayerStatesChange={setLayerStates}
             scannedLayers={effectiveLayers}
             isViewTab={true}
-            simplifiedMode={activeTool === 1 || activeTool === 2 || activeTool === 3}
+            simplifiedMode={activeTool === 1 || activeTool === 3}
             selectedView={selectedView}
             prepQCMode={isPrepQCActive}
             prepQCVariant={prepQCVariant}
             trimMode={isTrimActive}
             onTrimLayerChange={setTrimSelectedLayer}
+            occlusogramMode={isOcclusogramActive}
+            onOcclusogramLayerChange={setOcclusogramSelectedLayer}
             selectedBiteOptions={selectedBiteOptions}
             onBiteClick={handleBiteClick}
+            isDentures={scanType === "dentures"}
           />
         </div>
         
@@ -310,7 +314,7 @@ export default function MultiLayerView({ patient, onBack, onHome, onNavigateToMu
         
         {/* ToolbarView - Top Right */}
         <div className="absolute top-4 right-4 z-10">
-          <ToolbarView onActiveToolChange={setActiveTool} onMonochromeChange={setIsMonochromeActive} />
+          <ToolbarView onActiveToolChange={setActiveTool} onMonochromeChange={setIsMonochromeActive} isDentures={scanType === "dentures"} />
         </div>
 
         {/* Jaw Position Panel — bottom-left, single upper view */}
@@ -448,7 +452,8 @@ export default function MultiLayerView({ patient, onBack, onHome, onNavigateToMu
                 isTrimActive={isTrimActive}
                 trimSelectedLayer={trimSelectedLayer}
                 monochrome={isMonochromeActive}
-                isOcclusogramActive={activeTool === 2}
+                isOcclusogramActive={isOcclusogramActive}
+                occlusogramSelectedLayer={occlusogramSelectedLayer}
                 isPrepReductionActive={activeTool === 4}
                 singleUpperPos={upperSinglePos}
                 showToothMarkers={showToothMarkers}

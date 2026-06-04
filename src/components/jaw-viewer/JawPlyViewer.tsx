@@ -23,6 +23,8 @@ const GHOST_SHEEN = new THREE.Color(0xd7d2ef);
 const GHOST_OPACITY = 0.45;
 const TOTAL_STEPS = 10;
 const MESH_SCALE = 0.035;
+const UPPER_ROT: [number, number, number] = [Math.PI * 0.6, 0, Math.PI];
+const LOWER_ROT: [number, number, number] = [Math.PI * 0.6, Math.PI, Math.PI];
 // Width of the dithered dissolve band as a fraction of model world-X span.
 const REVEAL_FEATHER_RATIO = 0.12;
 
@@ -140,14 +142,14 @@ function getClipConstantForStep(step: number, minX: number, maxX: number): numbe
 }
 
 /** Full model — no clipping (used for scan view and final undo step). */
-function PlyMesh({ url, monochrome }: { url: string; monochrome: boolean }) {
+function PlyMesh({ url, monochrome, rotation = UPPER_ROT }: { url: string; monochrome: boolean; rotation?: [number, number, number] }) {
   const rawGeo = useLoader(PLYLoader, url);
   const geometry = usePreparedGeometry(rawGeo);
   // key forces a full material remount on toggle so vertexColors shader define is recompiled
   const materialKey = monochrome ? 'mono' : 'color';
 
   return (
-    <mesh key={materialKey} geometry={geometry} scale={MESH_SCALE} rotation={[Math.PI * 0.6, 0, Math.PI]}>
+    <mesh key={materialKey} geometry={geometry} scale={MESH_SCALE} rotation={rotation}>
       {monochrome ? (
         <meshPhysicalMaterial
           color={STONE_COLOR}
@@ -191,11 +193,13 @@ function ClippedPlyMesh({
   monochrome,
   revealStep,
   showGhost,
+  rotation = UPPER_ROT,
 }: {
   url: string;
   monochrome: boolean;
   revealStep: number;
   showGhost: boolean;
+  rotation?: [number, number, number];
 }) {
   const rawGeo = useLoader(PLYLoader, url);
   const geometry = usePreparedGeometry(rawGeo);
@@ -271,7 +275,7 @@ function ClippedPlyMesh({
 
   return (
     <>
-      <mesh ref={meshRef} geometry={geometry} scale={MESH_SCALE} rotation={[Math.PI * 0.6, 0, Math.PI]}>
+      <mesh ref={meshRef} geometry={geometry} scale={MESH_SCALE} rotation={rotation}>
         <meshPhysicalMaterial
           ref={solidMatRef}
           {...solidMaterialProps}
@@ -283,7 +287,7 @@ function ClippedPlyMesh({
         <mesh
           geometry={geometry}
           scale={MESH_SCALE}
-          rotation={[Math.PI * 0.6, 0, Math.PI]}
+          rotation={rotation}
           renderOrder={1}
         >
           <meshPhysicalMaterial
@@ -336,19 +340,18 @@ function SceneContent({
   showMarkers: boolean;
 }) {
   const useClipping = revealStep < TOTAL_STEPS;
-  // jaw='upper' displays Lower.ply (model swap) → label ADA #17-32 (lower arch)
-  // jaw='lower' displays Upper.ply (model swap) → label ADA #1-15 (upper arch)
   const canShowMarkers = (jaw === 'upper' || jaw === 'lower') && showMarkers;
-  const markerPlyUrl = jaw === 'upper' ? lowerJawUrl : upperJawUrl;
-  const markerJawType = jaw === 'upper' ? 'lower' : 'upper';
+  const markerPlyUrl = jaw === 'upper' ? upperJawUrl : lowerJawUrl;
+  const markerJawType = jaw === 'upper' ? 'upper' : 'lower';
+  const meshRotation = jaw === 'lower' ? LOWER_ROT : UPPER_ROT;
 
   return (
     <>
       <Center>
         {useClipping ? (
-          <ClippedPlyMesh url={modelUrl} monochrome={monochrome} revealStep={revealStep} showGhost={showGhost} />
+          <ClippedPlyMesh url={modelUrl} monochrome={monochrome} revealStep={revealStep} showGhost={showGhost} rotation={meshRotation} />
         ) : (
-          <PlyMesh url={modelUrl} monochrome={monochrome} />
+          <PlyMesh url={modelUrl} monochrome={monochrome} rotation={meshRotation} />
         )}
       </Center>
       {canShowMarkers && (
@@ -356,7 +359,7 @@ function SceneContent({
           <ToothMarkers
             plyUrl={markerPlyUrl}
             scale={MESH_SCALE}
-            rotation={[Math.PI * 0.6, 0, Math.PI]}
+            rotation={meshRotation}
             jawType={markerJawType}
           />
         </Suspense>
@@ -366,7 +369,7 @@ function SceneContent({
 }
 
 export default function JawPlyViewer({ jaw, monochrome = false, revealStep = TOTAL_STEPS, showGhost = false, showMarkers = false }: JawPlyViewerProps) {
-  const modelUrl = jaw === 'upper' ? lowerJawUrl : jaw === 'lower' ? upperJawUrl : bothArchesUrl;
+  const modelUrl = jaw === 'upper' ? upperJawUrl : jaw === 'lower' ? lowerJawUrl : bothArchesUrl;
   const [modelGroup, setModelGroup] = useState<THREE.Group | null>(null);
 
   return (

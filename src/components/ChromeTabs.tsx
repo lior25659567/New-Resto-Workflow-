@@ -22,7 +22,7 @@ interface ChromeTabsProps {
   tabs: Tab[];
   activeTabId: string;
   setActiveTabId: (id: string) => void;
-  onAddTab: (scanType: "Pre-treatment" | "Additional scan" | "Reference scan" | "Copy denture" | "Emergence profile" | "Treatment scan") => void;
+  onAddTab: (scanType: "Pre-treatment" | "Additional scan" | "Reference scan" | "Denture copy" | "Emergence profile" | "Treatment scan") => void;
   selectedBiteOptions: string[];
   onBiteOptionsChange: (options: string[]) => void;
   activeBiteOptions?: string[];
@@ -154,7 +154,7 @@ export function ChromeTabs({
     setIsDropdownOpen(!isDropdownOpen);
   };
 
-  const handleDropdownOptionClick = (scanType: "Pre-treatment" | "Additional scan" | "Reference scan" | "Copy denture" | "Emergence profile" | "Treatment scan") => {
+  const handleDropdownOptionClick = (scanType: "Pre-treatment" | "Additional scan" | "Reference scan" | "Denture copy" | "Emergence profile" | "Treatment scan") => {
     // Track the current additional scan tab ids before adding
     if (scanType === "Additional scan") {
       const currentAdditionalIds = new Set(tabs.filter(t => t.type === "additional").map(t => t.id));
@@ -191,9 +191,11 @@ export function ChromeTabs({
   const hasPreTreatment = tabs.some(tab => tab.type === "pre-treatment");
   const additionalScanCount = tabs.filter(tab => tab.type === "additional").length;
   const canAddAdditionalScan = additionalScanCount < 2;
+  const canAddAdditionalScanDentures = additionalScanCount < 1;
   const maxTabsReached = tabs.length >= 4;
   const hasReferenceScan = tabs.some(tab => tab.label === "Reference scan");
-  const hasCopyDenture = tabs.some(tab => tab.label === "Copy denture");
+  const hasCopyDenture = tabs.some(tab => tab.label === "Denture copy");
+  const isDenturesDropdownEmpty = workflow === "dentures" && hasReferenceScan && hasCopyDenture && !canAddAdditionalScanDentures;
   const hasEmergenceProfile = tabs.some(tab => tab.label === "Emergence profile");
   const hasTreatmentScan = tabs.some(tab => tab.label === "Treatment scan");
 
@@ -349,8 +351,9 @@ export function ChromeTabs({
         {/* Add Tab Button */}
         <div className="relative ml-[8px] self-center">
           <button
-            onClick={handleAddClick}
-            className="w-[36px] h-[36px] flex items-center justify-center rounded-[6px] bg-white hover:bg-[#f0f0f0] transition-colors z-20"
+            onClick={isDenturesDropdownEmpty ? undefined : handleAddClick}
+            disabled={isDenturesDropdownEmpty}
+            className={`w-[36px] h-[36px] flex items-center justify-center rounded-[6px] transition-colors z-20 ${isDenturesDropdownEmpty ? 'bg-white opacity-30 cursor-not-allowed' : 'bg-white hover:bg-[#f0f0f0]'}`}
           >
             <Plus className="w-[20px] h-[20px] text-[#5f6368]" />
           </button>
@@ -465,7 +468,7 @@ export function ChromeTabs({
                 </>
               )}
 
-              {/* Dentures - Reference scan, Copy denture, Additional scan, Additional bites */}
+              {/* Dentures - Reference scan, Denture copy, Additional scan, Additional bites */}
               {workflow === "dentures" && (
                 <>
                   {!hasReferenceScan && (
@@ -479,14 +482,14 @@ export function ChromeTabs({
                   )}
                   {!hasCopyDenture && (
                     <button
-                      onClick={() => handleDropdownOptionClick("Copy denture")}
+                      onClick={() => handleDropdownOptionClick("Denture copy")}
                       className="w-full text-left px-[20px] py-[14px] hover:bg-[#f5f5f5] transition-colors text-[16px] text-[#3e3d40] flex items-center"
                       style={{ fontFamily: "'Roboto', sans-serif" }}
                     >
-                      Copy denture
+                      Denture copy
                     </button>
                   )}
-                  {canAddAdditionalScan && !maxTabsReached && (
+                  {canAddAdditionalScanDentures && (
                     <button
                       onClick={() => handleDropdownOptionClick("Additional scan")}
                       className="w-full text-left px-[20px] py-[14px] hover:bg-[#f5f5f5] transition-colors text-[16px] text-[#3e3d40] flex items-center whitespace-nowrap"
@@ -495,66 +498,6 @@ export function ChromeTabs({
                       Additional scan
                     </button>
                   )}
-                  <div className="border-t border-gray-200">
-                    <button
-                      onClick={handleBiteToggle}
-                      className="w-full text-left px-[20px] py-[14px] hover:bg-[#f5f5f5] transition-colors text-[16px] text-[#3e3d40] flex items-center justify-between whitespace-nowrap"
-                      style={{ fontFamily: "'Roboto', sans-serif" }}
-                    >
-                      <span>Additional bites</span>
-                      <svg
-                        className="w-[20px] h-[20px] transition-transform"
-                        style={{ transform: isBiteExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                    {isBiteExpanded && (
-                      <div className="bg-white">
-                        {/* Additional bite options */}
-                        {[
-                          { key: "Additional centric", label: "Additional Centric" },
-                          { key: "Left lateral", label: "Left lateral" },
-                          { key: "Right lateral", label: "Right lateral" },
-                          { key: "Protrusive", label: "Protrusive" },
-                          { key: "Retrusive", label: "Retrusive" }
-                        ].map(option => (
-                          <label
-                            key={option.key}
-                            className="flex items-center gap-[16px] px-[16px] py-[8px] hover:bg-[#f5f5f5] transition-colors cursor-pointer h-[56px]"
-                          >
-                            <div className="relative shrink-0 size-[28px] flex items-center justify-center">
-                              <input
-                                type="checkbox"
-                                checked={selectedBiteOptions.includes(option.key)}
-                                onChange={() => handleBiteCheckboxChange(option.key)}
-                                className="sr-only"
-                              />
-                              <div 
-                                className={`size-[20px] rounded-[4px] flex items-center justify-center transition-all ${
-                                  selectedBiteOptions.includes(option.key)
-                                    ? 'bg-[#009ace] border-0'
-                                    : 'bg-white border border-[#939598]'
-                                }`}
-                              >
-                                {selectedBiteOptions.includes(option.key) && (
-                                  <svg width="14" height="10" viewBox="0 0 14 10" fill="none">
-                                    <path d="M1 4.5L5 8.5L13 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                  </svg>
-                                )}
-                              </div>
-                            </div>
-                            <span className="text-[18px] text-[#3e3d40] leading-[28px]" style={{ fontFamily: "'Roboto', sans-serif" }}>
-                              {option.label}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
-                  </div>
                 </>
               )}
 

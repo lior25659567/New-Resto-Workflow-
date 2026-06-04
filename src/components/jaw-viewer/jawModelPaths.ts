@@ -5,10 +5,10 @@ import newBothArches from '@/assets/3d-models/new 3d models /Both Arches.ply?url
 import bite          from '@/assets/3d-models/Bite.ply?url';
 
 export const jawModels = {
-  upper_pretreatment: newLowerJaw,
-  upper_treatment:    newLowerJaw,
-  lower_pretreatment: newUpperJaw,
-  lower_treatment:    newUpperJaw,
+  upper_pretreatment: newUpperJaw,
+  upper_treatment:    newUpperJaw,
+  lower_pretreatment: newLowerJaw,
+  lower_treatment:    newLowerJaw,
   bite,
   both_arches:        newBothArches,
 };

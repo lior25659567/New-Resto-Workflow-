@@ -1,4 +1,4 @@
-import type { MaterialType, MaterialThresholds, ViewId, ViewFinding, ZoneReduction, CameraPreset, ZoneId } from './types';
+import type { MaterialType, MaterialThresholds, ViewId, ViewFinding, ZoneReduction, CameraPreset, ZoneId, CaseType, InsertionPathAngles, ZoneUndercutSeverity, UndercutSeverityLevel } from './types';
 
 // ─── Material Thresholds ────────────────────────────────────────────────────
 export const MATERIAL_THRESHOLDS: Record<MaterialType, MaterialThresholds> = {
@@ -172,3 +172,67 @@ export const CROWN_PARAMS = {
 };
 
 export const PANEL_WIDTH = 360;
+
+// ─── Insertion Path ─────────────────────────────────────────────────────────
+export const OPTIMAL_INSERTION_PATH: InsertionPathAngles = { azimuth: 0, elevation: 0 };
+
+// ─── Undercut Severity Colours ───────────────────────────────────────────────
+export const UNDERCUT_SEVERITY_COLORS: Record<UndercutSeverityLevel, { color: string; label: string; bg: string; text: string }> = {
+  0: { color: '#16a34a', label: 'None',     bg: '#dcfce7', text: '#166534' },
+  1: { color: '#ca8a04', label: 'Minor',    bg: '#fef9c3', text: '#713f12' },
+  2: { color: '#f97316', label: 'Moderate', bg: '#ffedd5', text: '#7c2d12' },
+  3: { color: '#dc2626', label: 'Severe',   bg: '#fee2e2', text: '#7f1d1d' },
+};
+
+/**
+ * Simulates undercut severity per zone based on the insertion path angles.
+ * At the optimal path (0°, 0°) a minor distal undercut is always present
+ * (clinically realistic for most crown preps).  Tilting the path away from
+ * optimal progressively exposes additional undercuts on the corresponding
+ * axial walls.
+ */
+export function computeUndercutSeverities(azimuth: number, elevation: number): ZoneUndercutSeverity {
+  // Positive azimuth = buccal tilt → distal wall undercut exposure
+  const distalBase: UndercutSeverityLevel = azimuth >= 20 ? 3 : azimuth >= 10 ? 2 : azimuth >= 3 ? 1 : 0;
+  // Always keep a minor distal undercut at optimal path (realistic baseline)
+  const distal: UndercutSeverityLevel = (azimuth === 0 && elevation === 0) ? 1 : distalBase;
+
+  // Negative azimuth = lingual tilt → mesial wall undercut exposure
+  const mesial: UndercutSeverityLevel = azimuth <= -20 ? 3 : azimuth <= -10 ? 2 : azimuth <= -3 ? 1 : 0;
+
+  // Positive elevation = mesial tilt → buccal wall
+  const buccal: UndercutSeverityLevel = elevation >= 12 ? 2 : elevation >= 6 ? 1 : 0;
+
+  // Negative elevation = distal tilt → lingual wall
+  const lingual: UndercutSeverityLevel = elevation <= -12 ? 2 : elevation <= -6 ? 1 : 0;
+
+  return { distal, mesial, buccal, lingual };
+}
+
+/** Returns the severity colour hex for a given level. */
+export function getSeverityColor(severity: UndercutSeverityLevel): string {
+  return UNDERCUT_SEVERITY_COLORS[severity].color;
+}
+
+/** Derives case type, primary tooth ADA, and linked teeth from toothTreatments map. */
+export function detectCaseFromTreatments(
+  toothTreatments?: Record<string, string>
+): { caseType: CaseType; prepToothAda: number | null; linkedTeeth: number[] } {
+  if (!toothTreatments) return { caseType: 'single-crown', prepToothAda: null, linkedTeeth: [] };
+
+  const crownTeeth = Object.entries(toothTreatments)
+    .filter(([, t]) => t === 'Crown' || t === 'Implant based')
+    .map(([tooth]) => parseInt(tooth, 10))
+    .filter(n => !isNaN(n))
+    .sort((a, b) => a - b);
+
+  if (crownTeeth.length === 0) return { caseType: 'single-crown', prepToothAda: null, linkedTeeth: [] };
+  if (crownTeeth.length >= 2) return { caseType: 'bridge', prepToothAda: crownTeeth[0], linkedTeeth: crownTeeth };
+  return { caseType: 'single-crown', prepToothAda: crownTeeth[0], linkedTeeth: crownTeeth };
+}
+
+export const CASE_TYPE_LABELS: Record<CaseType, string> = {
+  'single-crown': 'Crown',
+  'bridge': 'Bridge',
+  'full-arch': 'Full Arch',
+};

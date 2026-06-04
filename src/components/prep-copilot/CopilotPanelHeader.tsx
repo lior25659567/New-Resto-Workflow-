@@ -1,22 +1,39 @@
-import type { MaterialType } from './types';
-import CopilotMaterialSelector from './CopilotMaterialSelector';
+import type { MaterialType, CaseType } from './types';
+import { CASE_TYPE_LABELS } from './constants';
 
 interface CopilotPanelHeaderProps {
   onClose: () => void;
   selectedMaterial: MaterialType;
   onMaterialChange: (material: MaterialType) => void;
   statusText?: string;
+  caseType?: CaseType;
+  prepToothAda?: number | null;
+  linkedTeeth?: number[];
 }
 
-export default function CopilotPanelHeader({ onClose, selectedMaterial, onMaterialChange, statusText }: CopilotPanelHeaderProps) {
+export default function CopilotPanelHeader({
+  onClose,
+  statusText,
+  caseType,
+  prepToothAda,
+  linkedTeeth,
+}: CopilotPanelHeaderProps) {
+  const caseLabel = caseType ? CASE_TYPE_LABELS[caseType] : null;
+
+  const contextLine = (() => {
+    if (!caseType || !prepToothAda) return statusText || '1 prep detected';
+    if (caseType === 'bridge' && linkedTeeth && linkedTeeth.length >= 2) {
+      return `Bridge — Teeth ${linkedTeeth.map(a => `#${a}`).join(', ')}`;
+    }
+    return `Crown — Tooth #${prepToothAda}`;
+  })();
+
   return (
     <div className="shrink-0">
-      {/* Title row */}
       <div
-        className="flex items-center justify-between px-4 py-3.5"
+        className="flex items-center justify-between px-4 py-3.5 border-b border-[#e5e7eb]"
         style={{
           background: 'linear-gradient(90deg, rgba(0,154,206,0.08) 0%, rgba(139,92,246,0.08) 100%)',
-          borderBottom: '1px solid #e5e7eb',
         }}
       >
         <div className="flex items-center gap-2.5">
@@ -37,28 +54,31 @@ export default function CopilotPanelHeader({ onClose, selectedMaterial, onMateri
             AI
           </span>
         </div>
-        <button
-          onClick={onClose}
-          className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-black/5 transition-colors"
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </button>
-      </div>
-
-      {/* Status + Material */}
-      <div className="px-4 py-2.5 border-b border-[#e5e7eb]">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[13px] text-[#64748b]">
-            {statusText || '1 prep detected'}
-          </span>
+        <div className="flex items-center gap-2">
+          {caseLabel && (
+            <span
+              className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
+              style={{
+                background: caseType === 'bridge' ? 'rgba(139,92,246,0.10)' : 'rgba(0,154,206,0.10)',
+                color: caseType === 'bridge' ? '#7c3aed' : '#0077a3',
+              }}
+            >
+              {caseLabel}
+            </span>
+          )}
+          {!caseLabel && contextLine && (
+            <span className="text-[12px] text-[#64748b]">{contextLine}</span>
+          )}
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-black/5 transition-colors"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
         </div>
-        <CopilotMaterialSelector
-          selected={selectedMaterial}
-          onChange={onMaterialChange}
-        />
       </div>
     </div>
   );

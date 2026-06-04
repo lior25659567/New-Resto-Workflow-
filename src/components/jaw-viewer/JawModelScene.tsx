@@ -30,6 +30,7 @@ interface JawModelSceneProps {
   trimSelectedLayer: 'pre-treatment' | 'treatment';
   monochrome?: boolean;
   isOcclusogramActive?: boolean;
+  occlusogramSelectedLayer?: 'pre-treatment' | 'treatment' | 'additional';
   isPrepReductionActive?: boolean;
   bothUpperPos?: [number, number, number];
   bothLowerPos?: [number, number, number];
@@ -40,7 +41,7 @@ interface JawModelSceneProps {
 const SCALE = 0.035;
 
 const UPPER_ROT: [number, number, number] = [Math.PI * 0.6, 0, Math.PI];
-const LOWER_ROT: [number, number, number] = [Math.PI * 0.6, 0, Math.PI];
+const LOWER_ROT: [number, number, number] = [Math.PI * 0.6, Math.PI, Math.PI];
 
 export const DEFAULT_BOTH_UPPER_POS: [number, number, number] = [-0.35, -0.10, 0.75];
 export const DEFAULT_BOTH_LOWER_POS: [number, number, number] = [0.25, 0.00, -0.40];
@@ -55,6 +56,7 @@ export default function JawModelScene({
   trimSelectedLayer,
   monochrome = false,
   isOcclusogramActive = false,
+  occlusogramSelectedLayer = 'treatment',
   isPrepReductionActive = false,
   singleUpperPos = SINGLE_POS,
   showToothMarkers = false,
@@ -69,6 +71,12 @@ export default function JawModelScene({
     const isVisible = jaw === 'upper' ? state.upperVisible : state.lowerVisible;
     const sliderOpacity = (jaw === 'upper' ? state.upper : state.lower) / 100;
     if (!isVisible) return { opacity: 0, visible: false };
+    if (isOcclusogramActive) {
+      const occLayer = occlusogramSelectedLayer === 'pre-treatment' ? 'pretreatment' : 'treatment';
+      return layer === occLayer
+        ? { opacity: 1, visible: true }
+        : { opacity: 0, visible: false };
+    }
     if (isToolActive && !isPrepQCActive && !isTrimActive) {
       return layer === 'treatment'
         ? { opacity: 1, visible: true }
@@ -138,15 +146,23 @@ export default function JawModelScene({
   };
 
   const heatmapMode = getHeatmapMode();
-  
-  const upperHeatmapData = heatmapMode === 'occlusgram' ? 
-    generateOcclusogramData('upper') : 
-    heatmapMode === 'prep-reduction' ? 
+
+  const upperHeatmapData = heatmapMode === 'occlusgram' ?
+    generateOcclusogramData('upper') :
+    heatmapMode === 'prep-reduction' ?
     generatePrepReductionData('upper') : {};
-  const lowerHeatmapData = heatmapMode === 'occlusgram' ? 
-    generateOcclusogramData('lower') : 
-    heatmapMode === 'prep-reduction' ? 
+  const lowerHeatmapData = heatmapMode === 'occlusgram' ?
+    generateOcclusogramData('lower') :
+    heatmapMode === 'prep-reduction' ?
     generatePrepReductionData('lower') : {};
+
+  // Which PLY to use for occlusogram heatmap overlay based on selected layer
+  const occUpperUrl = occlusogramSelectedLayer === 'pre-treatment'
+    ? jawModels.upper_pretreatment
+    : jawModels.upper_treatment;
+  const occLowerUrl = occlusogramSelectedLayer === 'pre-treatment'
+    ? jawModels.lower_pretreatment
+    : jawModels.lower_treatment;
 
   return (
     <>
@@ -190,7 +206,7 @@ export default function JawModelScene({
           {heatmapMode !== 'none' && showUpper && !isBoth && (
             <Suspense fallback={null}>
               <ToothHeatmapOverlay
-                url={jawModels.upper_treatment}
+                url={heatmapMode === 'occlusgram' ? occUpperUrl : jawModels.upper_treatment}
                 jawType="lower"
                 rotation={UPPER_ROT}
                 scale={SCALE}
@@ -230,7 +246,7 @@ export default function JawModelScene({
           {heatmapMode !== 'none' && showLower && !isBoth && (
             <Suspense fallback={null}>
               <ToothHeatmapOverlay
-                url={jawModels.lower_treatment}
+                url={heatmapMode === 'occlusgram' ? occLowerUrl : jawModels.lower_treatment}
                 jawType="upper"
                 rotation={LOWER_ROT}
                 scale={SCALE}

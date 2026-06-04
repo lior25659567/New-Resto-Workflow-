@@ -5,13 +5,14 @@ import CopilotScene from './CopilotScene';
 
 interface CopilotModelViewerProps {
   children?: React.ReactNode;
+  hideDefaultModel?: boolean;
 }
 
-export default function CopilotModelViewer({ children }: CopilotModelViewerProps) {
+export default function CopilotModelViewer({ children, hideDefaultModel }: CopilotModelViewerProps) {
   return (
     <div className="relative w-full h-full min-h-0">
       <Canvas
-        camera={{ position: [0, 0, 14], fov: 35, near: 0.1, far: 1000 }}
+        camera={{ position: [0, -2, 4.5], fov: 40, near: 0.01, far: 1000, up: [0, 1, 0] }}
         gl={{
           antialias: true,
           alpha: true,
@@ -19,14 +20,13 @@ export default function CopilotModelViewer({ children }: CopilotModelViewerProps
           toneMapping: THREE.ACESFilmicToneMapping,
           toneMappingExposure: 0.7,
         }}
-        style={{ width: '100%', height: '100%', background: '#d6e7f1' }}
-        dpr={[1, 2]}
+        style={{ width: '100%', height: '100%', background: '#d6e7f1', touchAction: 'none' }}
+        dpr={typeof window !== 'undefined' ? window.devicePixelRatio : 1}
       >
         <Suspense fallback={null}>
-          <CopilotScene>{children}</CopilotScene>
+          <CopilotScene hideDefaultModel={hideDefaultModel}>{children}</CopilotScene>
         </Suspense>
       </Canvas>
     </div>
   );
 }
-

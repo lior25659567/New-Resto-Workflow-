@@ -69,9 +69,10 @@ function computeBounds(geo: THREE.BufferGeometry): ModelBounds {
 
 interface CopilotSceneProps {
   children?: React.ReactNode;
+  hideDefaultModel?: boolean;
 }
 
-export default function CopilotScene({ children }: CopilotSceneProps) {
+export default function CopilotScene({ children, hideDefaultModel }: CopilotSceneProps) {
   const rawGeo = useLoader(PLYLoader, jawModels.lower_treatment);
   const geometry = usePreparedGeometry(rawGeo);
   const bounds = useMemo(() => computeBounds(geometry), [geometry]);
@@ -88,19 +89,21 @@ export default function CopilotScene({ children }: CopilotSceneProps) {
       <pointLight position={[0, 10, 0]} intensity={0.2} color="#ffffff" />
       <Environment files={hdrUrl} background={false} />
 
-      <mesh geometry={geometry} scale={MESH_SCALE} rotation={MESH_ROTATION}>
-        <meshPhysicalMaterial
-          vertexColors
-          roughness={0.4}
-          metalness={0.0}
-          side={THREE.DoubleSide}
-          clearcoat={0.15}
-          clearcoatRoughness={0.4}
-          reflectivity={0.3}
-          envMapIntensity={0.5}
-          ior={1.3}
-        />
-      </mesh>
+      {!hideDefaultModel && (
+        <mesh geometry={geometry} scale={MESH_SCALE} rotation={MESH_ROTATION}>
+          <meshPhysicalMaterial
+            vertexColors
+            roughness={0.4}
+            metalness={0.0}
+            side={THREE.DoubleSide}
+            clearcoat={0.15}
+            clearcoatRoughness={0.4}
+            reflectivity={0.3}
+            envMapIntensity={0.5}
+            ior={1.3}
+          />
+        </mesh>
+      )}
       <ModelContext.Provider value={modelCtx}>
         {children}
       </ModelContext.Provider>
@@ -111,15 +114,16 @@ export default function CopilotScene({ children }: CopilotSceneProps) {
         enablePan
         enableZoom
         enableRotate
-        rotateSpeed={1.5}
-        zoomSpeed={1.0}
-        panSpeed={0.8}
         enableDamping
         dampingFactor={0.08}
-        minDistance={3}
-        maxDistance={25}
+        rotateSpeed={1.5}
+        zoomSpeed={1.2}
+        panSpeed={1.2}
+        minDistance={0.5}
+        maxDistance={10}
         minPolarAngle={0.1}
         maxPolarAngle={Math.PI - 0.1}
+        target={[0, 0, 0]}
       />
     </>
   );

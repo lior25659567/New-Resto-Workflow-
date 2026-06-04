@@ -14,6 +14,8 @@ Builds a complete, developer-ready Figma handoff section for any feature or comp
 
 **Always pass `skillNames: "figma-handoff"` when calling `use_figma` as part of this skill.**
 
+---
+
 ## When to Use
 
 - User says "hand off", "handoff", "document for dev", or "add states to Figma"
@@ -32,416 +34,636 @@ Builds a complete, developer-ready Figma handoff section for any feature or comp
 
 ---
 
-## Skill Boundaries
+## RULE #1 — Always Use Real Components, Never Draw Fake Ones
 
-**This skill does:**
-- Audit a handoff page for missing states and add them
-- Create a new handoff section for any feature (states, annotations, flows, specs)
-- Link handoff nodes to code via Code Connect
-- Document motion specs, responsive behavior, and edge cases
+**This is the most important rule in this skill.**
 
-**This skill does NOT:**
-- Build production screens (use `figma-generate-design`)
-- Create new design system components (use `figma-use` directly)
-- Write Code Connect `.figma.ts` template files (use `figma-code-connect`)
+Before drawing any frame, rectangle, or text to represent a UI element — first check if a real Figma component exists for it. Using fake drawn elements when real components exist is always wrong. It wastes time, looks wrong, and misrepresents the design system.
 
----
+The workflow is:
+1. **Inspect first** — find what components exist in the file
+2. **Clone or instantiate** the real component
+3. **Modify the instance** — relabel text nodes, swap variants, hide/show children
+4. **Only draw custom frames** for annotation overlays and callout badges — never for UI elements
 
-## Before You Start — Read the Code
-
-Before touching Figma, read the component or feature you're handing off:
-
-1. Find the source file(s) — search by component name or feature keyword
-2. Read the props/types interface — every prop is a potential state or variant to document
-3. Read any enum/union types — each value typically needs its own card
-4. Read the CSS or animation keyframes — copy exact values into annotations
-5. Note any non-obvious behavior: edge cases, loading states, error handling
-
-This reading phase is non-negotiable. A handoff built without reading the code will miss states.
+**What this means in practice:**
+- Tab bars → use the real `Tab-Bar` ComponentSet, pick the right `Tab-Numbers=N` variant
+- Toolbars → use the real `Toolbar` ComponentSet, pick `Scanning page=Scan` or `=View`
+- Layer panels → use the real `layer panel` ComponentSet
+- Dropdowns, buttons, sliders → find them in the design system, don't draw boxes
 
 ---
 
-## Step 1: Audit the Existing Handoff Page
+## RULE #2 — Component Inspection Before Any Write
 
-Call `get_metadata` on the Figma file (no nodeId = lists all pages). Then call it again with the handoff page ID to see what sections already exist.
+Before touching any component in Figma, run a full inspection call to understand:
+- The main component ID and key
+- The ComponentSet name and all variant names
+- The exact children structure (what's inside the instance)
+- Which text nodes are editable (their exact node IDs and current `characters`)
+- Which children can be `visible = false/true`
+
+**Inspection script — run this FIRST for any component you're working with:**
 
 ```js
-// List all pages
-(async () => {
-  const pages = figma.root.children.map(p => ({ id: p.id, name: p.name }));
-  figma.closePlugin(JSON.stringify(pages));
-})()
+const uiPage = figma.root.children.find(p => p.name === "PAGE_NAME");
+await figma.setCurrentPageAsync(uiPage);
+
+const node = await figma.getNodeByIdAsync("NODE_ID");
+
+// Get main component + all variants in the ComponentSet
+function getCompInfo(inst) {
+  if (!inst || inst.type !== "INSTANCE") return null;
+  const mc = inst.mainComponent;
+  if (!mc) return null;
+  const parent = mc.parent;
+  return {
+    id: mc.id, key: mc.key, name: mc.name,
+    setName: parent ? parent.name : null,
+    setId: parent ? parent.id : null,
+    variants: (parent && parent.type === "COMPONENT_SET")
+      ? parent.children.map(c => ({ id: c.id, key: c.key, name: c.name }))
+      : []
+  };
+}
+
+// Flatten all descendants with type + text content
+function flatChildren(node, depth = 0) {
+  if (depth > 5) return [];
+  const r = [{
+    depth, id: node.id, name: node.name, type: node.type,
+    chars: node.type === "TEXT" ? node.characters : null,
+    visible: node.visible !== false,
+    w: Math.round(node.width), h: Math.round(node.height),
+    mainCompName: node.type === "INSTANCE" && node.mainComponent ? node.mainComponent.name : null,
+  }];
+  if ("children" in node) for (const c of node.children) r.push(...flatChildren(c, depth + 1));
+  return r;
+}
+
+return {
+  id: node.id, name: node.name, type: node.type,
+  compInfo: getCompInfo(node),
+  children: flatChildren(node).slice(0, 80),
+};
 ```
 
-Then navigate to the right page and scan existing sections:
+Run this inspection, read the output carefully, then plan your writes. Never guess node IDs.
 
+---
+
+## RULE #3 — You Cannot appendChild Inside an Instance
+
+**This throws: `"Cannot move node. New parent is an instance or is inside of an instance"`**
+
+When a component only has N slots but you need N+1 items (e.g. 3-layer panel for 4 dentures layers):
+- Create a **second full instance** of the component
+- **Hide the children you don't need** on the second instance (`node.visible = false`)
+- Hide the duplicate header/nav bar on the second instance
+- Relabel just the one item you do need
+
+**Pattern for "more items than slots":**
 ```js
-(async () => {
-  const targetPageId = "PAGE_ID";
-  const page = figma.root.children.find(p => p.id === targetPageId);
-  if (page) await figma.setCurrentPageAsync(page);
-  const sections = figma.currentPage.children.map(n => ({
-    id: n.id, name: n.name, x: Math.round(n.x), y: Math.round(n.y),
-    w: Math.round(n.width), h: Math.round(n.height)
-  }));
-  figma.closePlugin(JSON.stringify(sections));
-})()
+// Instance 1: fills slots 1-3
+const inst1 = comp.createInstance();
+// ... relabel slots 1-3 ...
+screen.appendChild(inst1);
+
+// Instance 2: only slot 1 visible, header hidden
+const inst2 = comp.createInstance();
+const header = inst2.children.find(c => c.name === "Header-Frame-Name");
+if (header) header.visible = false;
+const buttons = inst2.findAll(n => n.type === "INSTANCE" && n.name === "Row-Component-Name");
+if (buttons[1]) buttons[1].visible = false; // hide slot 2
+if (buttons[2]) buttons[2].visible = false; // hide slot 3
+// relabel buttons[0] to item 4
+screen.appendChild(inst2);
+inst2.y = inst1.y + inst1.height + 4; // position directly below
 ```
 
-Use `get_screenshot` on any node to visually verify what's already documented.
-
-Cross-reference against the state checklist in `references/state-checklist.md`. Note every gap — these become your cards.
-
 ---
 
-## Step 2: Plan What to Document
+## RULE #4 — Relabeling Text Inside Instances
 
-Group your gaps into logical sections. Each section = one `use_figma` call.
+Text nodes inside instances ARE editable. Find them by `characters` content or by known node ID path.
 
-**Standard section types:**
-
-| Section type | Contents |
-|---|---|
-| **States** | All variants of a single component (default, hover, active, focused, disabled, error, loading, empty, success) |
-| **Variants / Sizes** | All prop combinations (size sm/md/lg, variant primary/secondary/danger) |
-| **Interaction Flow** | Multi-step user journey shown as a linear sequence of frames |
-| **Motion Spec** | Annotated before/after frames with duration, easing, keyframe values |
-| **Responsive** | Same component at each breakpoint (375 / 768 / 1024 / 1440) |
-| **Edge Cases** | Long text, empty data, error data, max/min values, RTL layout |
-| **Assets** | Export-ready icons, images, with density and format annotations |
-
-Decide how many cards per section. A section covering all states of one component typically has 6–12 cards at 280–320px wide each.
-
----
-
-## Step 3: Find the Next Available Position
-
-Never place content on top of existing sections:
+**Always do this in two passes — swap variant first, then relabel:**
 
 ```js
-(async () => {
-  const page = figma.root.children.find(p => p.id === "PAGE_ID");
-  await figma.setCurrentPageAsync(page);
-  let maxX = 0;
-  for (const child of figma.currentPage.children) {
-    maxX = Math.max(maxX, child.x + child.width);
+// Step 1: swap to correct variant (if needed)
+try { tabInstance.swapComponent(targetVariantComponent); } catch(e) {}
+
+// Step 2: find and relabel text — AFTER swap (swap resets characters)
+const textNodes = instance.findAllWithCriteria({ types: ["TEXT"] });
+for (const tn of textNodes) {
+  // Skip pure numeric text (slider values like "0", "100")
+  if (tn.characters && tn.characters.length > 2 && isNaN(Number(tn.characters))) {
+    try {
+      await figma.loadFontAsync(tn.fontName);
+      tn.characters = "New Label";
+      break;
+    } catch(e) {}
   }
-  figma.closePlugin(JSON.stringify({ nextX: maxX + 200 }));
-})()
+}
+```
+
+**If you know the exact node ID** (from an inspection call), use it directly — it's faster and more reliable:
+```js
+const labelNode = await figma.getNodeByIdAsync("I40:2887;983:87407;999:105710;999:105254");
+await figma.loadFontAsync(labelNode.fontName);
+labelNode.characters = "Reference scan";
 ```
 
 ---
 
-## Step 4: Create the Section Wrapper
+## RULE #5 — Component State Mapping
 
-One wrapper frame per section, created in its own `use_figma` call. Return the wrapper ID — you'll need it in Step 5.
+When a component has multiple states, always use `swapComponent()` to pick the correct variant — don't try to fake states by changing colors.
 
+**Pattern for state-aware component placement:**
 ```js
-(async () => {
-  const page = figma.root.children.find(p => p.id === "PAGE_ID");
-  await figma.setCurrentPageAsync(page);
+// Map your logical state to the component variant
+const STATE_VARIANTS = {
+  "before-scan-unselected": await figma.getNodeByIdAsync("COMP_ID_1"),
+  "after-scan-selected":    await figma.getNodeByIdAsync("COMP_ID_2"),
+  "after-scan-unselected":  await figma.getNodeByIdAsync("COMP_ID_3"),
+  "disabled":               await figma.getNodeByIdAsync("COMP_ID_4"),
+};
 
-  const wrapper = figma.createFrame();
-  wrapper.name = "SECTION_NAME"; // e.g. "12. Button — All States"
-  wrapper.layoutMode = "VERTICAL";
-  wrapper.primaryAxisAlignItems = "MIN";
-  wrapper.counterAxisAlignItems = "MIN";
-  wrapper.itemSpacing = 40;
-  wrapper.paddingTop = wrapper.paddingBottom = 60;
-  wrapper.paddingLeft = wrapper.paddingRight = 60;
-  wrapper.fills = [{ type: "SOLID", color: { r: 0.96, g: 0.97, b: 0.98 } }];
-  wrapper.layoutSizingHorizontal = "HUG";
-  wrapper.layoutSizingVertical = "HUG";
-  wrapper.x = NEXT_X; // from Step 3
-  wrapper.y = 0;
+// Apply the right variant to each instance
+for (let i = 0; i < instances.length; i++) {
+  const state = getStateForItem(i); // your logic
+  const variantComp = STATE_VARIANTS[state];
+  try { instances[i].swapComponent(variantComp); } catch(e) {}
+  // relabel after swap
+  const texts = instances[i].findAllWithCriteria({ types: ["TEXT"] });
+  for (const t of texts) { /* ... */ }
+}
+```
 
-  // Section header
-  await figma.loadFontAsync({ family: "Inter", style: "Bold" });
-  const title = figma.createText();
-  title.fontName = { family: "Inter", style: "Bold" };
-  title.fontSize = 22;
-  title.characters = "SECTION_TITLE";
-  title.fills = [{ type: "SOLID", color: { r: 0.05, g: 0.05, b: 0.1 } }];
-  title.layoutSizingHorizontal = "FILL";
-  wrapper.appendChild(title);
+**Common variant name patterns to look for:**
+- `State=Before Scan` / `State=After Scan` — scan state
+- `Selected=Yes` / `Selected=No` — active/inactive tab
+- `Expand=On` / `Expand=Off` — collapsed/expanded panel
+- `Arch=Upper` / `Arch=Lower` / `Arch=Both` — jaw view
+- `Scanning page=Scan` / `Scanning page=View` — toolbar context
+- `Tab-Numbers=1..4` — number of tabs shown
 
-  // Optional subtitle / context line
-  await figma.loadFontAsync({ family: "Inter", style: "Regular" });
-  const sub = figma.createText();
-  sub.fontName = { family: "Inter", style: "Regular" };
-  sub.fontSize = 13;
-  sub.characters = "Source: src/components/ComponentName.tsx";
-  sub.fills = [{ type: "SOLID", color: { r: 0.5, g: 0.5, b: 0.55 } }];
-  sub.layoutSizingHorizontal = "FILL";
-  wrapper.appendChild(sub);
+---
 
-  figma.closePlugin(JSON.stringify({ wrapperId: wrapper.id }));
-})()
+## RULE #6 — Building Screen Flows: Clone, Don't Create From Scratch
+
+For interaction flows showing real UI screens, always **clone source screens** rather than building from scratch.
+
+**Pattern:**
+```js
+// 1. Clone the source screen
+const src = await figma.getNodeByIdAsync("SOURCE_SCREEN_ID");
+const clone = src.clone();
+clone.name = "Step N — Description";
+clone.x = X_POSITION;
+clone.y = Y_POSITION;
+flowContainer.appendChild(clone);
+
+// 2. Replace components inside the clone with correct variant/state
+//    - find Tab-Bar instance → remove it → create correct variant instance
+//    - find Toolbar instance → remove it → create correct variant instance
+//    - etc.
+
+// 3. Add annotation overlay (dark frame with text) — this IS custom-drawn
+const ann = figma.createFrame();
+ann.name = "annotation";
+ann.x = 1400; ann.y = 160;
+// ... annotation content ...
+clone.appendChild(ann);
+
+// 4. Add callout badges pointing to specific UI areas
+const callout = figma.createFrame();
+callout.x = 0; callout.y = 76; // overlaid on tab bar
+callout.resize(400, 40);
+callout.fills = [{ type: "SOLID", color: { r: 0.2, g: 0.55, b: 0.85 } }];
+callout.cornerRadius = 6;
+clone.appendChild(callout);
+```
+
+**What to replace in each cloned screen:**
+1. **Tab-Bar instance** — remove old, create new from correct `Tab-Numbers=N` variant, relabel tab text nodes
+2. **Toolbar instance** — remove old, create new from correct `Scanning page=Scan/View` variant, hide tools as needed
+3. **Layer panel instance** — remove old, create new from correct `Expand=On, Arch=Both` variant, relabel layer names
+4. **Fix any stale text** (e.g. header title "Wellness scan" → "Dentures")
+
+**Component replacement pattern:**
+```js
+async function replaceComponent(screen, componentName, newComp, x, y) {
+  const old = screen.children.find(c => c.name === componentName);
+  if (old) old.remove();
+  const inst = newComp.createInstance();
+  inst.name = componentName;
+  inst.x = x; inst.y = y;
+  screen.appendChild(inst);
+  return inst;
+}
 ```
 
 ---
 
-## Step 5: Build the Cards
+## Step 1: Pre-Flight — Inspect the File
 
-One `use_figma` call per group of related cards (e.g., all button states in one call). Fetch the wrapper by ID at the start of every call.
-
-### Card structure
-
-Each card follows this layout (auto-layout VERTICAL):
-1. **State label** — bold, 13–14px, describes the state name
-2. **Visual** — component instance, screenshot, or SVG representation
-3. **Annotation** — regular 11px, explains WHY / the behavior / the code value
+Before writing anything:
 
 ```js
-(async () => {
-  const wrapper = await figma.getNodeByIdAsync("WRAPPER_ID");
+const uiPage = figma.root.children.find(p => p.name === "TARGET_PAGE");
+await figma.setCurrentPageAsync(uiPage);
 
-  async function makeCard(stateName, visualNodeOrNull, annotationText) {
-    const card = figma.createFrame();
-    card.name = stateName;
-    card.layoutMode = "VERTICAL";
-    card.primaryAxisAlignItems = "MIN";
-    card.counterAxisAlignItems = "CENTER";
-    card.itemSpacing = 12;
-    card.paddingTop = card.paddingBottom = 16;
-    card.paddingLeft = card.paddingRight = 16;
-    card.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
-    card.cornerRadius = 8;
-    card.effects = [{
-      type: "DROP_SHADOW",
-      color: { r: 0, g: 0, b: 0, a: 0.08 },
-      offset: { x: 0, y: 2 }, radius: 8, spread: 0, visible: true, blendMode: "NORMAL"
-    }];
-    card.layoutSizingHorizontal = "FIXED";
-    card.resize(300, 100); // height will HUG after content is added
+// List all top-level nodes + their positions
+const nodes = uiPage.children.map(n => ({
+  id: n.id, name: n.name, type: n.type,
+  x: Math.round(n.x), y: Math.round(n.y),
+  w: Math.round(n.width), h: Math.round(n.height)
+}));
 
-    // Label
-    await figma.loadFontAsync({ family: "Inter", style: "Semi Bold" });
-    const label = figma.createText();
-    label.fontName = { family: "Inter", style: "Semi Bold" };
-    label.fontSize = 13;
-    label.characters = stateName;
-    label.fills = [{ type: "SOLID", color: { r: 0.1, g: 0.1, b: 0.15 } }];
-    label.layoutSizingHorizontal = "FILL";
-    card.appendChild(label);
+// Find all ComponentSets on the page — these are your real components
+figma.skipInvisibleInstanceChildren = true;
+const compSets = uiPage.findAllWithCriteria({ types: ["COMPONENT_SET"] }).map(cs => ({
+  id: cs.id, name: cs.name,
+  variants: cs.children.map(c => ({ id: c.id, name: c.name, key: c.key }))
+}));
 
-    // Visual (component instance or placeholder rect)
-    if (visualNodeOrNull) {
-      visualNodeOrNull.layoutSizingHorizontal = "FILL";
-      card.appendChild(visualNodeOrNull);
-    } else {
-      // Placeholder when no visual is available yet
-      const placeholder = figma.createFrame();
-      placeholder.resize(268, 120);
-      placeholder.fills = [{ type: "SOLID", color: { r: 0.93, g: 0.94, b: 0.96 } }];
-      placeholder.cornerRadius = 4;
-      placeholder.layoutSizingHorizontal = "FILL";
-      card.appendChild(placeholder);
+// Next available X position
+let maxX = 0;
+for (const n of uiPage.children) maxX = Math.max(maxX, n.x + n.width);
+
+return { nodes, compSets, nextX: Math.round(maxX) + 200 };
+```
+
+Use `get_screenshot` on any node to visually understand what already exists.
+
+---
+
+## Step 2: Read the Code
+
+Before touching Figma, read the source files:
+
+1. Find source file(s) — search by component name or feature keyword
+2. Read the props/types interface — every prop is a potential state to document
+3. Read enum/union types — each value = one card or screen
+4. Note conditional renders — `workflow === 'dentures'`, `isDentures`, `hideCopilot`, etc.
+5. Note non-obvious behavior: state machines, restrictions, hidden elements
+
+**These are your handoff items:**
+- Every `if (condition)` that hides a UI element → annotate it
+- Every prop that changes a component's appearance → show it as a state card
+- Every `type === 'treatment'` check → document which layer types trigger it
+- Every `swapComponent` / variant switch in code → mirror it with the real Figma component variant
+
+---
+
+## Step 3: Plan What to Document
+
+For each feature, decide which section types are needed:
+
+| Section | When to use | Contents |
+|---|---|---|
+| **Component States** | Any interactive component | All variants: default, hover, active, disabled, loading, error, selected |
+| **Conditional Visibility** | When code hides/shows tools or elements | Show the element, its condition, and what triggers hide/show |
+| **Interaction Flow** | Multi-step features, wizards, scan flows | Cloned screens in sequence with real components in correct states |
+| **Layer / Tab States** | Tab bars, layer panels, multi-step tabs | One card per tab state (Before Scan, After Scan, Selected, Disabled) |
+| **Restrictions Table** | Rules that differ per context | Table: context → allowed/blocked → code condition |
+| **Requirements Matrix** | Spec-driven features | Table: requirement → implementation → file location |
+| **Motion Spec** | Animated transitions | Before/after frames with duration, easing, properties |
+
+---
+
+## Step 4: Create the Handoff Wrapper
+
+One outer frame on the page. Use FIXED sizing (not HUG) since it sits directly on the canvas (not inside another auto-layout):
+
+```js
+const uiPage = figma.root.children.find(p => p.name === "PAGE_NAME");
+await figma.setCurrentPageAsync(uiPage);
+
+await figma.loadFontAsync({ family: "Inter", style: "Bold" });
+await figma.loadFontAsync({ family: "Inter", style: "Regular" });
+
+const wrapper = figma.createFrame();
+wrapper.name = "HANDOFF — Feature Name";
+wrapper.x = NEXT_X; // from Step 1
+wrapper.y = 0;
+wrapper.resize(2600, 200); // fixed width, height grows as sections are added
+wrapper.layoutMode = "VERTICAL";
+wrapper.primaryAxisSizingMode = "AUTO"; // vertical HUG
+wrapper.counterAxisSizingMode = "FIXED"; // fixed width
+wrapper.primaryAxisAlignItems = "MIN";
+wrapper.counterAxisAlignItems = "MIN";
+wrapper.itemSpacing = 80;
+wrapper.paddingTop = 60; wrapper.paddingBottom = 80;
+wrapper.paddingLeft = 60; wrapper.paddingRight = 60;
+wrapper.fills = [{ type: "SOLID", color: { r: 0.96, g: 0.97, b: 0.99 } }];
+uiPage.appendChild(wrapper);
+wrapper.placeholder = true; // shimmer while building
+
+// Title — append FIRST, then set FILL
+const title = figma.createText();
+title.fontName = { family: "Inter", style: "Bold" };
+title.fontSize = 32;
+title.characters = "Feature Name — Developer Handoff";
+title.fills = [{ type: "SOLID", color: { r: 0.05, g: 0.1, b: 0.2 } }];
+wrapper.appendChild(title);
+title.layoutSizingHorizontal = "FILL";
+title.textAutoResize = "HEIGHT";
+
+return { wrapperId: wrapper.id };
+```
+
+---
+
+## Step 5: Build Sections
+
+Each section is a FIXED-width frame inside the wrapper. Never use HUG on text children of FIXED frames — use `resize()` instead and set `textAutoResize = "HEIGHT"`.
+
+**Text node pattern (works reliably inside FIXED-width frames):**
+```js
+function makeText(parent, txt, fontStyle, size, color, x, y, width) {
+  const t = figma.createText();
+  t.fontName = { family: "Inter", style: fontStyle };
+  t.fontSize = size;
+  t.characters = txt;
+  t.fills = [{ type: "SOLID", color }];
+  t.x = x; t.y = y;
+  t.resize(width, 20); // fixed width first
+  t.textAutoResize = "HEIGHT"; // then let height grow
+  t.lineHeight = { value: Math.round(size * 1.5), unit: "PIXELS" };
+  parent.appendChild(t);
+  return t;
+}
+```
+
+**Section frame pattern:**
+```js
+const sec = figma.createFrame();
+sec.name = "01 — Section Title";
+sec.resize(2480, 200); // fixed width matching wrapper inner width
+sec.layoutMode = "VERTICAL";
+sec.primaryAxisSizingMode = "AUTO"; // HUG vertical
+sec.counterAxisSizingMode = "FIXED";
+sec.itemSpacing = 24;
+sec.paddingTop = 40; sec.paddingBottom = 40;
+sec.paddingLeft = 40; sec.paddingRight = 40;
+sec.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+sec.cornerRadius = 12;
+sec.effects = [{ type: "DROP_SHADOW", color: { r: 0, g: 0, b: 0, a: 0.06 }, offset: { x: 0, y: 2 }, radius: 12, spread: 0, visible: true, blendMode: "NORMAL" }];
+wrapper.appendChild(sec);
+// Add title and content...
+```
+
+---
+
+## Step 6: Component State Cards
+
+For each component with multiple states, show each state using the **real Figma component variant** — not a drawing.
+
+**Full pattern:**
+```js
+// 1. Find all variants of the component
+const compSet = await figma.getNodeByIdAsync("COMPONENT_SET_ID");
+const variants = compSet.children; // array of Component nodes
+
+// 2. For each state, create an instance of the correct variant
+for (const variantComp of variants) {
+  const inst = variantComp.createInstance();
+  
+  // 3. If the variant has text to update, do it
+  const texts = inst.findAllWithCriteria({ types: ["TEXT"] });
+  for (const t of texts) {
+    if (t.characters === "Placeholder" || t.name === "Label") {
+      await figma.loadFontAsync(t.fontName);
+      t.characters = "Actual label text";
     }
-
-    // Annotation
-    await figma.loadFontAsync({ family: "Inter", style: "Regular" });
-    const ann = figma.createText();
-    ann.fontName = { family: "Inter", style: "Regular" };
-    ann.fontSize = 11;
-    ann.lineHeight = { value: 16, unit: "PIXELS" };
-    ann.characters = annotationText;
-    ann.fills = [{ type: "SOLID", color: { r: 0.45, g: 0.45, b: 0.5 } }];
-    ann.layoutSizingHorizontal = "FILL";
-    ann.textAutoResize = "HEIGHT";
-    card.appendChild(ann);
-
-    card.layoutSizingVertical = "HUG";
-    wrapper.appendChild(card);
-    return card.id;
   }
 
-  // Example: build multiple state cards
-  const ids = [];
-  ids.push(await makeCard("Default", null, "Resting state. No interaction."));
-  ids.push(await makeCard("Hover", null, "cursor: pointer. Background shifts to --color-surface-hover."));
-  ids.push(await makeCard("Pressed / Active", null, "scale(0.97), duration 80ms ease-out."));
-  ids.push(await makeCard("Focused", null, "2px outline, offset 2px. Color: --color-focus-ring."));
-  ids.push(await makeCard("Disabled", null, "opacity: 0.4. pointer-events: none. aria-disabled=true."));
-  ids.push(await makeCard("Loading", null, "Button text replaced by spinner. Width locked to prevent layout shift."));
-  ids.push(await makeCard("Error", null, "Border: --color-danger. Error message rendered below field."));
+  // 4. Build a card: label + instance + annotation
+  const card = figma.createFrame();
+  card.name = variantComp.name;
+  card.x = cardX; card.y = 0;
+  card.resize(CARD_WIDTH, 100);
+  card.layoutMode = "VERTICAL";
+  card.primaryAxisSizingMode = "AUTO";
+  card.counterAxisSizingMode = "FIXED";
+  card.itemSpacing = 12;
+  card.paddingTop = card.paddingBottom = 16;
+  card.paddingLeft = card.paddingRight = 16;
+  card.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+  card.cornerRadius = 8;
+  card.strokeWeight = 1.5;
+  card.strokes = [{ type: "SOLID", color: { r: 0.85, g: 0.88, b: 0.95 } }];
+  rowFrame.appendChild(card);
 
-  figma.closePlugin(JSON.stringify({ cardIds: ids }));
-})()
-```
-
-### Using real component instances
-
-If the design system has the component, import it instead of using a placeholder:
-
-```js
-// From search_design_system results, you'll have a component key
-const compSet = await figma.importComponentSetByKeyAsync("COMPONENT_KEY");
-const variant = compSet.children.find(c => c.name.includes("variant=primary,state=hover"))
-  || compSet.defaultVariant;
-const instance = variant.createInstance();
-instance.layoutSizingHorizontal = "FILL";
-card.appendChild(instance);
-```
-
----
-
-## Step 6: Add Annotations for Non-Obvious Behavior
-
-Annotations are the most important part of a handoff. Visuals show the shape; annotations explain the behavior.
-
-**Always annotate:**
-- Exact CSS/token values (color variable name, not hex)
-- Animation: trigger, duration (ms), easing, what properties change
-- Interaction logic: what triggers this state, what comes next
-- Constraints: min/max width, text truncation rules
-- Accessibility: aria role, keyboard behavior, focus management
-- Responsive: how this component changes at each breakpoint
-
-**Format for annotation text:**
-
-```
-State: [state name]
-Trigger: [what causes this]
-CSS: [property: value / variable name]
-Duration: [Xms / easing curve]
-Next state: [what happens after]
-```
-
-For motion specs specifically, create a dedicated card showing the before and after frames side by side with arrows:
-
-```js
-// Motion spec card: two frames side by side with arrow + timing label
-(async () => {
-  const wrapper = await figma.getNodeByIdAsync("WRAPPER_ID");
-
-  const motionCard = figma.createFrame();
-  motionCard.name = "Motion — [AnimationName]";
-  motionCard.layoutMode = "HORIZONTAL";
-  motionCard.primaryAxisAlignItems = "CENTER";
-  motionCard.counterAxisAlignItems = "CENTER";
-  motionCard.itemSpacing = 24;
-  motionCard.paddingTop = motionCard.paddingBottom = 20;
-  motionCard.paddingLeft = motionCard.paddingRight = 20;
-  motionCard.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
-  motionCard.cornerRadius = 8;
-  motionCard.layoutSizingHorizontal = "HUG";
-  motionCard.layoutSizingVertical = "HUG";
-  wrapper.appendChild(motionCard);
-
-  // [Build before frame, arrow text, after frame inside motionCard]
-  // Then add timing annotation below
-
-  await figma.loadFontAsync({ family: "Inter", style: "Regular" });
-  const timing = figma.createText();
-  timing.fontName = { family: "Inter", style: "Regular" };
-  timing.fontSize = 11;
-  timing.characters = "Duration: 200ms  |  Easing: ease-out  |  Property: opacity, transform";
-  timing.fills = [{ type: "SOLID", color: { r: 0.45, g: 0.45, b: 0.5 } }];
-  // append below the motion card or use a wrapper
-
-  figma.closePlugin(JSON.stringify({ motionCardId: motionCard.id }));
-})()
+  // State label
+  makeText(card, variantComp.name, "Semi Bold", 12, { r: 0.1, g: 0.1, b: 0.2 }, 0, 0, CARD_WIDTH - 32);
+  
+  // Real component instance
+  card.appendChild(inst);
+  
+  // Annotation: what this state means + code condition
+  makeText(card, "Trigger: ...\nCode: condition === value", "Regular", 11, { r: 0.4, g: 0.4, b: 0.5 }, 0, 0, CARD_WIDTH - 32);
+}
 ```
 
 ---
 
-## Step 7: Add Interaction Flow (for multi-step features)
+## Step 7: Conditional Visibility Documentation
 
-For any feature with multiple steps (wizard, modal sequence, scan progression, etc.), create a flow diagram:
+For any element that is conditionally hidden in code, document it with:
+1. The element shown in its visible state (real component instance)
+2. The condition that hides it
+3. A "HIDDEN" state card showing what it looks like when removed (empty space or grayed out)
+
+**Color coding for visibility:**
+- ✅ Green background `{ r: 0.94, g: 0.98, b: 0.94 }` — element shown
+- 🚫 Red background `{ r: 1, g: 0.93, b: 0.93 }` — element hidden
+- Border color matches: shown = `{ r: 0.2, g: 0.65, b: 0.3 }`, hidden = `{ r: 0.8, g: 0.2, b: 0.2 }`
+
+**Annotation format for hidden elements:**
+```
+HIDDEN — [condition that hides it]
+Spec: "[exact spec requirement text]"
+Code: [file.tsx — exact variable/condition name]
+```
+
+---
+
+## Step 8: Interaction Flow Screens
+
+For multi-step flows, build a horizontal sequence of cloned real screens.
+
+**Full flow pattern:**
 
 ```js
-// Horizontal sequence of state frames connected by arrows
-(async () => {
-  const wrapper = await figma.getNodeByIdAsync("WRAPPER_ID");
+// 1. Create the flow container
+const flowContainer = figma.createFrame();
+flowContainer.name = "FLOW — Feature Name (N Screens)";
+flowContainer.x = X_POS; flowContainer.y = Y_POS;
+flowContainer.resize(N * (1920 + 100) + 120, 1420);
+flowContainer.fills = [{ type: "SOLID", color: { r: 0.93, g: 0.95, b: 0.99 } }];
+flowContainer.cornerRadius = 16;
+uiPage.appendChild(flowContainer);
 
-  const flow = figma.createFrame();
-  flow.name = "Interaction Flow — [Feature Name]";
-  flow.layoutMode = "HORIZONTAL";
-  flow.primaryAxisAlignItems = "CENTER";
-  flow.counterAxisAlignItems = "CENTER";
-  flow.itemSpacing = 40;
-  flow.paddingTop = flow.paddingBottom = 40;
-  flow.paddingLeft = flow.paddingRight = 40;
-  flow.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
-  flow.cornerRadius = 8;
-  flow.layoutSizingHorizontal = "HUG";
-  flow.layoutSizingVertical = "HUG";
-  wrapper.appendChild(flow);
+// 2. For each step, clone the appropriate source screen
+const SCREEN_W = 1920;
+const GAP = 100;
+const SCREEN_Y = 216; // below step label
+const LABEL_Y = 160;
 
-  // For each step: create a labeled frame, append to flow
-  // Between steps: create a text node "→" as connector
+for (let i = 0; i < steps.length; i++) {
+  const x = 60 + i * (SCREEN_W + GAP);
+  
+  // Clone
+  const src = steps[i].isViewScreen ? viewSrc : scanSrc;
+  const clone = src.clone();
+  clone.name = steps[i].label;
+  clone.x = x; clone.y = SCREEN_Y;
+  flowContainer.appendChild(clone);
 
-  await figma.loadFontAsync({ family: "Inter", style: "Semi Bold" });
-  await figma.loadFontAsync({ family: "Inter", style: "Regular" });
+  // Step label banner (colored)
+  const labelFrame = figma.createFrame();
+  labelFrame.x = x; labelFrame.y = LABEL_Y;
+  labelFrame.resize(SCREEN_W, 48);
+  labelFrame.fills = [{ type: "SOLID", color: steps[i].color }];
+  labelFrame.cornerRadius = 8;
+  flowContainer.appendChild(labelFrame);
+  makeText(labelFrame, `STEP ${i+1} · ${steps[i].shortLabel}`, "Bold", 17, { r: 1, g: 1, b: 1 }, 20, 12, SCREEN_W - 40);
 
-  const steps = ["Step 1: Idle", "Step 2: User Action", "Step 3: Loading", "Step 4: Success"];
-  for (let i = 0; i < steps.length; i++) {
-    // Step frame
-    const stepFrame = figma.createFrame();
-    stepFrame.layoutMode = "VERTICAL";
-    stepFrame.primaryAxisAlignItems = "CENTER";
-    stepFrame.counterAxisAlignItems = "CENTER";
-    stepFrame.resize(180, 120);
-    stepFrame.fills = [{ type: "SOLID", color: { r: 0.93, g: 0.94, b: 0.97 } }];
-    stepFrame.cornerRadius = 6;
-    stepFrame.paddingTop = stepFrame.paddingBottom = 16;
-    stepFrame.paddingLeft = stepFrame.paddingRight = 12;
-
-    const stepLabel = figma.createText();
-    stepLabel.fontName = { family: "Inter", style: "Semi Bold" };
-    stepLabel.fontSize = 12;
-    stepLabel.characters = steps[i];
-    stepLabel.fills = [{ type: "SOLID", color: { r: 0.15, g: 0.15, b: 0.2 } }];
-    stepLabel.textAlignHorizontal = "CENTER";
-    stepFrame.appendChild(stepLabel);
-
-    flow.appendChild(stepFrame);
-
-    // Arrow between steps (not after last)
-    if (i < steps.length - 1) {
-      const arrow = figma.createText();
-      arrow.fontName = { family: "Inter", style: "Regular" };
-      arrow.fontSize = 20;
-      arrow.characters = "→";
-      arrow.fills = [{ type: "SOLID", color: { r: 0.6, g: 0.6, b: 0.6 } }];
-      flow.appendChild(arrow);
-    }
+  // Arrow
+  if (i < steps.length - 1) {
+    const arrowF = figma.createFrame();
+    arrowF.x = x + SCREEN_W + 10; arrowF.y = SCREEN_Y + 500;
+    arrowF.resize(80, 48);
+    arrowF.fills = [{ type: "SOLID", color: { r: 0.82, g: 0.86, b: 0.94 } }];
+    arrowF.cornerRadius = 24;
+    flowContainer.appendChild(arrowF);
+    makeText(arrowF, "→", "Bold", 26, { r: 0.3, g: 0.35, b: 0.5 }, 20, 6, 50);
   }
 
-  figma.closePlugin(JSON.stringify({ flowId: flow.id }));
-})()
+  // Replace components on the clone
+  await replaceTabBar(clone, steps[i].tabVariantId, steps[i].tabLabels, steps[i].activeTabIdx, steps[i].scannedIdxs);
+  await replaceToolbar(clone, steps[i].toolbarComp, steps[i].toolbarX, steps[i].toolbarY);
+  
+  // Add annotation overlay
+  const ann = figma.createFrame();
+  ann.x = 1380; ann.y = 160;
+  ann.resize(520, 400);
+  ann.fills = [{ type: "SOLID", color: { r: 0.05, g: 0.1, b: 0.25 }, opacity: 0.9 }];
+  ann.cornerRadius = 10;
+  clone.appendChild(ann);
+  makeText(ann, `STEP ${i+1} — ${steps[i].label}`, "Semi Bold", 13, { r: 0.6, g: 0.85, b: 1 }, 16, 16, 480);
+  makeText(ann, steps[i].annotationText, "Regular", 11, { r: 0.82, g: 0.88, b: 0.97 }, 16, 42, 480);
+}
 ```
 
 ---
 
-## Step 8: Validate Visually
+## Step 9: Requirements Traceability Table
 
-After each section is created, call `get_screenshot` on the wrapper node. Verify:
+For spec-driven features, always add a requirements matrix. This maps each spec requirement to the code implementation:
 
-- [ ] All cards render — no clipped or blank frames
-- [ ] State labels are readable
-- [ ] Annotations are visible (not white-on-white)
-- [ ] Placeholder rects stand in correctly where visuals are missing
-- [ ] Card spacing is consistent
-- [ ] Section title is at the top of the wrapper
-- [ ] No overlapping with existing sections
+```js
+const reqs = [
+  { priority: "P1", requirement: "Requirement text from spec", status: "✅", codeLocation: "file.tsx — exact variable/condition" },
+  // ...
+];
 
-Fix any issues with targeted `use_figma` calls before moving on.
+// Table header row
+const headerRow = figma.createFrame();
+headerRow.resize(2400, 44);
+// ... dark background, white text labels ...
+
+// One row per requirement
+for (const req of reqs) {
+  const row = figma.createFrame();
+  row.resize(2400, 48);
+  // Priority (60px) | Requirement (700px) | Status (60px) | Code Location (1580px)
+  makeText(row, req.priority, "Bold", 12, priorityColor, 0, 12, 60);
+  makeText(row, req.requirement, "Regular", 12, darkText, 60, 12, 700);
+  makeText(row, req.status, "Regular", 14, greenText, 760, 12, 60);
+  makeText(row, req.codeLocation, "Regular", 11, blueText, 820, 12, 1580);
+}
+```
 
 ---
 
-## Step 9: Link to Code (Code Connect)
+## Step 10: Annotation Overlays
 
-After the section is visually complete, map handoff nodes to their source code:
+Two types of annotation overlays to add on top of cloned screens:
 
-1. Get the node ID of each card from the previous steps
-2. Find the source file path in the codebase (grep or Read)
-3. Call `send_code_connect_mappings` with node IDs and source paths
-
-This lets developers click any handoff card in Dev Mode and jump directly to the React component, hook, or utility that implements it.
-
+**1. Annotation panel** (dark blue, top-right of screen) — explains the step:
+```js
+const annPanel = figma.createFrame();
+annPanel.name = "annotation";
+annPanel.x = 1380; annPanel.y = 160; // top-right area of a 1920-wide screen
+annPanel.resize(520, 400);
+annPanel.fills = [{ type: "SOLID", color: { r: 0.05, g: 0.1, b: 0.25 }, opacity: 0.9 }];
+annPanel.cornerRadius = 10;
+screen.appendChild(annPanel);
+// Lines: [text, isBold]
+for (const [text, bold] of lines) {
+  makeText(annPanel, text, bold ? "Semi Bold" : "Regular",
+    bold ? 13 : 11, bold ? { r: 0.6, g: 0.85, b: 1 } : { r: 0.82, g: 0.88, b: 0.97 },
+    16, currentY, 480);
+}
 ```
+
+**2. Callout badge** (colored strip at top of screen) — points to a specific element:
+```js
+const callout = figma.createFrame();
+callout.name = "callout";
+callout.x = 0; callout.y = 76; // overlaid on the tab bar area
+callout.resize(440, 40);
+callout.fills = [{ type: "SOLID", color: { r: 0.2, g: 0.55, b: 0.85 } }];
+callout.cornerRadius = 6;
+screen.appendChild(callout);
+makeText(callout, "↑  Explanation of what changed here", "Semi Bold", 13, { r: 1, g: 1, b: 1 }, 10, 10, 416);
+```
+
+**3. Highlight overlay** (colored translucent rect over a specific UI zone):
+```js
+const highlight = figma.createFrame();
+highlight.name = "highlight-zone";
+highlight.x = ZONE_X; highlight.y = ZONE_Y;
+highlight.resize(ZONE_W, ZONE_H);
+highlight.fills = [{ type: "SOLID", color: { r: 0.9, g: 0.1, b: 0.1 }, opacity: 0.18 }];
+highlight.strokeWeight = 2;
+highlight.strokes = [{ type: "SOLID", color: { r: 0.85, g: 0.1, b: 0.1 } }];
+highlight.cornerRadius = 6;
+screen.appendChild(highlight);
+```
+
+---
+
+## Step 11: Validate Visually
+
+After each section, call `screenshot()` on the wrapper or section:
+
+```js
+const screenshot = await sec.screenshot({ scale: 0.25 });
+return { secId: sec.id, screenshot };
+```
+
+Check:
+- [ ] All real component instances render correctly — not placeholder frames
+- [ ] Tab labels match the expected text for each state
+- [ ] Component variants show the correct state (Before Scan vs After Scan, etc.)
+- [ ] Annotation text is readable (light on dark)
+- [ ] Callout badges align with what they're pointing to
+- [ ] Hidden elements are actually hidden (not just transparent)
+- [ ] No overlapping with existing canvas content
+
+---
+
+## Step 12: Code Connect
+
+After the section is visually complete:
+
+```js
 send_code_connect_mappings({
   fileKey: "FILE_KEY",
   nodeId: "WRAPPER_NODE_ID",
@@ -458,87 +680,20 @@ send_code_connect_mappings({
 
 ---
 
-## Step 10: Record the Section
+## Common Failures & Fixes
 
-After completing a handoff section, save the node ID and position to project memory (`project` type) so future sessions can find it without re-scanning the entire file:
-
-- `Section name — node {id} at x={x}, y={y}, page: {page name}`
-
----
-
-## Common Edge Cases
-
-| Problem | Fix |
-|---------|-----|
-| `getNodeByIdAsync` returns null | Run `setCurrentPageAsync` first; the plugin context starts on whatever page is currently active |
-| Frame won't HUG children | Set `layoutSizingHorizontal = "HUG"` and `layoutSizingVertical = "HUG"` AFTER appending all children |
-| Text overflows card | Set `layoutSizingHorizontal = "FILL"` and `textAutoResize = "HEIGHT"` on every text node |
-| Only one page visible | Iterate `figma.root.children` to list all pages; setCurrentPageAsync to the right one before any node lookups |
-| Component instance wrong variant | Read the component's `name` property on each child of the ComponentSet to find the exact variant string |
-| Section renders on top of existing content | Always query `maxX` before placing; add 200px buffer |
-| Cards not aligned | Ensure the wrapper frame `counterAxisAlignItems = "MIN"` and all cards have `layoutSizingHorizontal = "FIXED"` |
-
----
-
-## Grid Layout for Cards (6+ cards)
-
-When a section has 6 or more cards, arrange them in a grid (rows of 4–5) instead of a single column:
-
-```js
-// Create a row container inside the wrapper
-(async () => {
-  const wrapper = await figma.getNodeByIdAsync("WRAPPER_ID");
-
-  const row = figma.createFrame();
-  row.name = "Row — [Group Name]";
-  row.layoutMode = "HORIZONTAL";
-  row.layoutWrap = "WRAP"; // enables wrapping to next line
-  row.primaryAxisAlignItems = "MIN";
-  row.counterAxisAlignItems = "MIN";
-  row.itemSpacing = 20;
-  row.counterAxisSpacing = 20; // vertical gap between wrapped rows
-  row.layoutSizingHorizontal = "FIXED";
-  row.resize(1600, 100); // wide enough for 5 cards per row
-  row.layoutSizingVertical = "HUG";
-  row.fills = [];
-  wrapper.appendChild(row);
-
-  // Then call makeCard() and append each card to `row` instead of `wrapper`
-  figma.closePlugin(JSON.stringify({ rowId: row.id }));
-})()
-```
-
----
-
-## Example — Full Handoff Request
-
-**User says:** "Hand off the SecondaryButton component to Figma"
-
-**What happens:**
-
-1. **Read the code**: Open `src/design-system/SecondaryButton.tsx`. Find props: `variant` ("default" | "toolbar"), `disabled`, `children`. Find hover/active/focus inline styles. Find "toolbar" variant with transparent background.
-
-2. **Audit**: Call `get_metadata` on the handoff page. Check if SecondaryButton states already exist.
-
-3. **Plan**: 8 cards needed — Default, Hover, Active, Focused, Disabled, Loading, Toolbar variant, Toolbar hover.
-
-4. **Position**: Find maxX, add 200px gap.
-
-5. **Build wrapper**: Name it "13. SecondaryButton — All States". Source subtitle: `src/design-system/SecondaryButton.tsx`.
-
-6. **Build cards** (one `use_figma` call):
-   - Default → annotation: "bg: color.neutral[100], border: 1px solid color.border.default"
-   - Hover → "bg: color.neutral[200], transition: 150ms ease"
-   - Active → "bg: color.neutral[300], scale: 0.98, duration 50ms"
-   - Focused → "outline: 2px solid color.primary[500], offset 2px"
-   - Disabled → "opacity: 0.4, pointer-events: none"
-   - Loading → "children replaced by 16px spinner, width locked"
-   - Toolbar → "bg: transparent, no border"
-   - Toolbar hover → "bg: color.neutral[100], fill appears on hover"
-
-7. **Validate**: Screenshot the wrapper, verify all 8 cards render.
-
-8. **Code Connect**: Map wrapper node to `src/design-system/SecondaryButton.tsx`.
+| Failure | Root Cause | Fix |
+|---------|-----------|-----|
+| Custom-drawn tab bar instead of real component | Skipped inspection phase | Always inspect first: find the ComponentSet, list variants, clone the right one |
+| `Cannot move node — new parent is an instance` | Tried to appendChild inside an instance | Create a second instance, hide unused slots, relabel what you need |
+| Text relabeling had no effect | Forgot to `await figma.loadFontAsync()` before changing `characters` | Load font → await → then mutate |
+| Wrong tab state shown (all look the same) | Didn't swap variants — all tabs use default variant | Use `swapComponent(variantNode)` to apply Before Scan / After Scan / Selected state |
+| `getNodeByIdAsync` returns null | Wrong page context | `await figma.setCurrentPageAsync(targetPage)` at the start of every call |
+| `layoutSizingHorizontal = "FILL"` throws | Node not yet inside an auto-layout parent | `parent.appendChild(child)` FIRST, then set FILL |
+| Text overflows its container | `textAutoResize` not set | Always set `t.resize(width, 20)` then `t.textAutoResize = "HEIGHT"` |
+| Sections overlap existing content | Didn't check canvas bounds | Query `maxX` of all page children before placing; add 200px gap |
+| Component shows wrong variant after relabel | Relabeled BEFORE swapping — swap resets text | Always: swap → then relabel |
+| `importComponentByKeyAsync` fails | Component is local (not from external library) | Use `figma.getNodeByIdAsync(nodeId)` to get local components directly |
 
 ---
 

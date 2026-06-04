@@ -3,12 +3,10 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useModelContext } from '../CopilotScene';
 import { HEATMAP_COLORS } from '../constants';
-import type { MaterialThresholds } from '../types';
 
 interface ReductionHeatmapProps {
   visible: boolean;
   isRescan?: boolean;
-  materialThresholds?: MaterialThresholds;
 }
 
 function getHeatmapColor(val: number): [number, number, number] {
@@ -27,139 +25,140 @@ function getHeatmapColor(val: number): [number, number, number] {
   return [...last.color] as [number, number, number];
 }
 
-// Focus heatmap on prep tooth area (lower jaw)
+// Prep tooth focus area — centered on lower first molar region
 const PREP_TOOTH_CENTER: [number, number, number] = [-0.8, -0.2, -0.3];
-const PREP_FOCUS_RADIUS = 0.4; // Only show heatmap within this radius of prep
+const PREP_FOCUS_RADIUS = 0.45;
 
-export default function ReductionHeatmap({ visible, isRescan, materialThresholds }: ReductionHeatmapProps) {
+export default function ReductionHeatmap({ visible, isRescan }: ReductionHeatmapProps) {
   const ctx = useModelContext();
-  const matRef = useRef<THREE.MeshBasicMaterial>(null);
   const startTimeRef = useRef<number | null>(null);
 
-  const { heatmapGeo, targetColors } = useMemo(() => {
-    if (!ctx) return { heatmapGeo: null, targetColors: new Float32Array(0) };
+  const { heatmapGeo, targetColors, baseColors } = useMemo(() => {
+    if (!ctx) return { heatmapGeo: null, targetColors: new Float32Array(0), baseColors: new Float32Array(0) };
 
     const geo = ctx.geometry.clone();
     const { bounds } = ctx;
     const pos = geo.attributes.position;
     const normals = geo.attributes.normal;
-    const colors = new Float32Array(pos.count * 3);
-    const targets = new Float32Array(pos.count * 3);
+    const n = pos.count;
 
-    for (let i = 0; i < pos.count; i++) {
+    const base = new Float32Array(n * 3);
+    const targets = new Float32Array(n * 3);
+
+    // Preserve original vertex colors if they exist
+    const origColors = geo.attributes.color;
+
+    for (let i = 0; i < n; i++) {
       const x = pos.getX(i);
       const y = pos.getY(i);
       const z = pos.getZ(i);
 
-      // Distance from prep tooth center
+      // Original color (brightened tooth color or white)
+      const origR = origColors ? Math.min(1, origColors.getX(i) * 1.4 + 0.15) : 0.93;
+      const origG = origColors ? Math.min(1, origColors.getY(i) * 1.4 + 0.15) : 0.89;
+      const origB = origColors ? Math.min(1, origColors.getZ(i) * 1.4 + 0.15) : 0.82;
+
+      base[i * 3] = origR;
+      base[i * 3 + 1] = origG;
+      base[i * 3 + 2] = origB;
+
       const distFromPrep = Math.sqrt(
         (x - PREP_TOOTH_CENTER[0]) ** 2 +
         (y - PREP_TOOTH_CENTER[1]) ** 2 +
         (z - PREP_TOOTH_CENTER[2]) ** 2
       );
 
-      // Focus mask: only show heatmap near prep tooth
+      // Smooth falloff from focus center
       let focusMask: number;
-      if (distFromPrep < PREP_FOCUS_RADIUS * 0.7) {
-        focusMask = 1.0; // full intensity near prep
-      } else if (distFromPrep < PREP_FOCUS_RADIUS) {
-        focusMask = 1 - (distFromPrep - PREP_FOCUS_RADIUS * 0.7) / (PREP_FOCUS_RADIUS * 0.3); // fade out
+      const innerR = PREP_FOCUS_RADIUS * 0.65;
+      const outerR = PREP_FOCUS_RADIUS;
+      if (distFromPrep < innerR) {
+        focusMask = 1.0;
+      } else if (distFromPrep < outerR) {
+        focusMask = 1 - (distFromPrep - innerR) / (outerR - innerR);
+        focusMask = focusMask * focusMask; // quadratic fade
       } else {
-        focusMask = 0.0; // no heatmap far from prep
+        focusMask = 0.0;
       }
 
-      if (focusMask < 0.01) {
-        // Outside focus area — keep original tooth color
-        targets[i * 3] = 1;
-        targets[i * 3 + 1] = 1;
-        targets[i * 3 + 2] = 1;
-        colors[i * 3] = 1;
-        colors[i * 3 + 1] = 1;
-        colors[i * 3 + 2] = 1;
+      if (focusMask < 0.02) {
+        targets[i * 3] = origR;
+        targets[i * 3 + 1] = origG;
+        targets[i * 3 + 2] = origB;
         continue;
       }
 
-      // Normal Y component: higher = occlusal surface
       const normalY = normals ? normals.getY(i) : 0;
+      const noise =
+        Math.sin(x * 0.15 + z * 0.11) * 0.12 +
+        Math.cos(y * 0.2 + x * 0.07) * 0.08 +
+        Math.sin(z * 0.13 + y * 0.17) * 0.06;
 
-      // Deterministic noise
-      const noise = Math.sin(x * 0.15 + z * 0.11) * 0.15 +
-                    Math.cos(y * 0.2 + x * 0.07) * 0.1 +
-                    Math.sin(z * 0.13 + y * 0.17) * 0.08;
-
-      // Reduction value based on surface orientation and position:
-      // - Occlusal (normalY > 0 = facing up) = more reduction needed (1.2-2.0)
-      // - Axial walls (normalY ~0) = moderate (0.8-1.2)
-      // - Y height on the model also matters: higher Y = cusps = more reduction
       const yNorm = (y - bounds.minY) / (bounds.maxY - bounds.minY);
 
       let reduction: number;
       if (isRescan) {
-        reduction = 1.1 + Math.max(0, normalY) * 0.5 + yNorm * 0.3 + noise * 0.15;
+        // Post-adjustment: mostly adequate/good reduction
+        reduction = 1.15 + Math.max(0, normalY) * 0.45 + yNorm * 0.25 + noise * 0.1;
       } else {
-        reduction = 0.5 + Math.max(0, normalY) * 0.8 + yNorm * 0.4 + noise * 0.3;
-        // Hot spots: areas of insufficient reduction on specific teeth
+        reduction = 0.5 + Math.max(0, normalY) * 0.85 + yNorm * 0.45 + noise * 0.28;
+        // Hot spots: clinically insufficient areas
         const angle = Math.atan2(z - bounds.centerZ, x - bounds.centerX);
-        const hotspot1 = Math.exp(-((angle - 2.8) ** 2) * 3);
-        const hotspot2 = Math.exp(-((angle + 0.5) ** 2) * 4);
-        reduction -= hotspot1 * 0.3 + hotspot2 * 0.2;
+        reduction -= Math.exp(-((angle - 2.8) ** 2) * 2.5) * 0.35;
+        reduction -= Math.exp(-((angle + 0.5) ** 2) * 3.5) * 0.25;
       }
-
-      reduction = Math.max(0.2, Math.min(2.5, reduction));
+      reduction = Math.max(0.15, Math.min(2.5, reduction));
 
       const [r, g, b] = getHeatmapColor(reduction);
-      // Blend toward original color based on focus mask
-      targets[i * 3] = 1 + (r - 1) * focusMask;
-      targets[i * 3 + 1] = 1 + (g - 1) * focusMask;
-      targets[i * 3 + 2] = 1 + (b - 1) * focusMask;
-
-      colors[i * 3] = 1;
-      colors[i * 3 + 1] = 1;
-      colors[i * 3 + 2] = 1;
+      targets[i * 3] = origR + (r - origR) * focusMask;
+      targets[i * 3 + 1] = origG + (g - origG) * focusMask;
+      targets[i * 3 + 2] = origB + (b - origB) * focusMask;
     }
 
-    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    return { heatmapGeo: geo, targetColors: targets };
+    geo.setAttribute('color', new THREE.BufferAttribute(base.slice(), 3));
+    return { heatmapGeo: geo, targetColors: targets, baseColors: base };
   }, [ctx, isRescan]);
 
   useFrame(() => {
-    if (!visible || !heatmapGeo) {
+    if (!heatmapGeo) return;
+    const colorAttr = heatmapGeo.attributes.color as THREE.BufferAttribute;
+    const arr = colorAttr.array as Float32Array;
+
+    if (!visible) {
+      // Fade back to original tooth color
+      let changed = false;
+      for (let i = 0; i < arr.length; i++) {
+        if (Math.abs(arr[i] - baseColors[i]) > 0.001) {
+          arr[i] += (baseColors[i] - arr[i]) * 0.12;
+          changed = true;
+        }
+      }
+      if (changed) colorAttr.needsUpdate = true;
       startTimeRef.current = null;
       return;
     }
 
     if (startTimeRef.current === null) startTimeRef.current = performance.now();
     const elapsed = performance.now() - startTimeRef.current;
-    const progress = Math.min(elapsed / 1200, 1);
+    const progress = Math.min(elapsed / 900, 1); // 900ms reveal
 
-    const colorAttr = heatmapGeo.attributes.color as THREE.BufferAttribute;
-    const arr = colorAttr.array as Float32Array;
-    for (let i = 0; i < arr.length; i += 3) {
-      arr[i] = 1 + (targetColors[i] - 1) * progress;
-      arr[i + 1] = 1 + (targetColors[i + 1] - 1) * progress;
-      arr[i + 2] = 1 + (targetColors[i + 2] - 1) * progress;
+    for (let i = 0; i < arr.length; i++) {
+      arr[i] = baseColors[i] + (targetColors[i] - baseColors[i]) * progress;
     }
     colorAttr.needsUpdate = true;
-
-    if (matRef.current) {
-      matRef.current.opacity = 0.75 * progress;
-    }
   });
 
-  if (!visible || !heatmapGeo) return null;
+  if (!heatmapGeo) return null;
 
   return (
     <mesh geometry={heatmapGeo} scale={0.055}>
       <meshBasicMaterial
-        ref={matRef}
         vertexColors
-        transparent
-        opacity={0}
         depthWrite={false}
         depthTest={true}
         polygonOffset
-        polygonOffsetFactor={-1}
-        polygonOffsetUnits={-1}
+        polygonOffsetFactor={-2}
+        polygonOffsetUnits={-2}
         side={THREE.DoubleSide}
       />
     </mesh>

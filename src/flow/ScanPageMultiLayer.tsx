@@ -31,7 +31,7 @@ import UndoLabeledChip from "../components/UndoLabeledChip";
 import ScanGuidanceViewer from "../components/scan-guidance/ScanGuidanceViewer";
 import PrepCopilotExperience from "../components/prep-copilot/PrepCopilotExperience";
 import JawPlyViewer from "../components/jaw-viewer/JawPlyViewer";
-import { UndoToast, useUndoToast } from "../components/UndoToast";
+import { UndoToast, useUndoToast, BiteNavigationBanner, useBiteToast } from "../components/UndoToast";
 import imgEmergenceProfile from "figma:asset/59c5249493a5cf8767547ab4edc771958cf79908.png";
 import imgScanWand from "figma:asset/6aa095904da22b160466272b62feb75140332534.png";
 import implantUpperArchScan from "figma:asset/0739b756c08b73712f33f02a9c7bb00b11f87b89.png";
@@ -188,8 +188,8 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
   // Track which layer contains the reference bite (first bite scanned becomes the reference)
   const [referenceBiteLayerId, setReferenceBiteLayerId] = useState<string | null>(null);
   
-  // Toast for bite layer navigation
-  const biteLayerToast = useUndoToast();
+  // Banner for bite layer navigation
+  const biteLayerToast = useBiteToast();
   
   // Helper to get jaw state for a tab
   const getTabJawState = (tabId: string) => tabJawStates[tabId] || { upper: false, lower: false, bite: false };
@@ -340,7 +340,7 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
     }
   }, [preTreatmentEnabled]);
 
-  const handleAddTab = (scanType: "Pre-treatment" | "Additional scan" | "Reference scan" | "Copy denture" | "Emergence profile" | "Treatment scan") => {
+  const handleAddTab = (scanType: "Pre-treatment" | "Additional scan" | "Reference scan" | "Denture copy" | "Emergence profile" | "Treatment scan") => {
     // Check if adding pre-treatment when treatment scan has any scanned jaws (for crown and implant workflows)
     if (scanType === "Pre-treatment" && (workflow === "crown" || workflow === "implant-based")) {
       // Find the initial treatment scan tab that has any jaw scanned
@@ -368,7 +368,7 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
       tabType = "pre-treatment";
     } else if (scanType === "Treatment scan") {
       tabType = "treatment";
-    } else if (scanType === "Reference scan" || scanType === "Copy denture" || scanType === "Emergence profile") {
+    } else if (scanType === "Reference scan" || scanType === "Denture copy" || scanType === "Emergence profile") {
       tabType = "treatment";
     } else {
       tabType = "additional";
@@ -460,12 +460,9 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
           setCurrentJaw('bite');
           setActiveBiteOptions([option]);
           
-          // Show Ogilvy-style toast: benefit-focused, clear, specific
-          // Promise: "Navigate instantly to your bite scan" 
-          // Proof: Shows which layer contains the bite
-          // News: Uses action language that conveys completion
           biteLayerToast.show(
-            `Bite found in ${referenceTab.label} — switched automatically`
+            `Bite already captured in ${referenceTab.label}`,
+            `You selected a bite option, but the bite was already scanned in ${referenceTab.label} — so we moved you there. All upper and lower jaws register relative to this layer.`
           );
           
           return;
@@ -557,7 +554,23 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
   
   // Universal jaw click handler - NOW ONLY FOR VIEWING, NOT SCANNING
   const handleJawClick = (jaw: 'upper' | 'lower' | 'bite') => {
-    // Only allow switching to the clicked jaw view - NO SCANNING
+    // Bite: if a reference bite layer exists on a different tab, redirect there and show toast
+    if (jaw === 'bite' && referenceBiteLayerId && referenceBiteLayerId !== activeTabId) {
+      const referenceTab = tabs.find(tab => tab.id === referenceBiteLayerId);
+      const referenceBiteState = getTabJawState(referenceBiteLayerId);
+      if (referenceTab && referenceBiteState.bite) {
+        setActiveTabId(referenceBiteLayerId);
+        setCurrentJaw('bite');
+        biteLayerToast.show(
+          `Bite already captured in ${referenceTab.label}`,
+          `You pressed bite, but it was already scanned in ${referenceTab.label} — so we moved you there. All upper and lower jaws register relative to this layer.`
+        );
+        return;
+      } else {
+        // Reference layer lost its bite — reset
+        setReferenceBiteLayerId(null);
+      }
+    }
     setCurrentJaw(jaw);
   };
   
@@ -574,7 +587,11 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
     
     // For bite/both view: scan directly like upper/lower
     if (currentJaw === 'bite') {
-      if (!jawState.bite) {
+      // Use reference layer's bite state so we don't re-scan a bite already captured on another tab
+      const biteAlreadyScanned = referenceBiteLayerId
+        ? getTabJawState(referenceBiteLayerId).bite
+        : jawState.bite;
+      if (!biteAlreadyScanned) {
         setHasAppliedUndoState(false);
         setIsScanning(true);
         setScanProgress(0);
@@ -1018,7 +1035,6 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
         onNavigateToSummary={onNavigateToSummary}
         canvasBg={canvasBg}
         onCanvasBgChange={onCanvasBgChange}
-        settingsOverlay
       />
 
       {/* Chrome Tabs - Below Header, with solid background (no gradient) */}
@@ -1047,6 +1063,7 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
         {/* ToolbarScan - Fixed in top right corner */}
         <div className="absolute right-4 top-4 z-50">
           <ToolbarScan
+            hideCopilot={workflow === "dentures"}
             onPrepEditChange={setIsPrepEditOpen}
             onCopilotChange={setIsCopilotActive}
             onCollapseChange={setIsToolbarCollapsed}
@@ -1074,9 +1091,13 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
           />
         </div>
 
-        {/* Bite Layer Navigation Toast */}
-        <div className="absolute right-4 top-20 z-50">
-          <UndoToast message={biteLayerToast.message} visible={biteLayerToast.visible} />
+        {/* Bite Layer Navigation Banner */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[70] pointer-events-none">
+          <BiteNavigationBanner
+            title={biteLayerToast.title}
+            body={biteLayerToast.body}
+            visible={biteLayerToast.visible}
+          />
         </div>
 
         {/* Undo variant switcher — draggable, toggle with 'E' key */}
@@ -1162,7 +1183,13 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
             )}
 
             {/* Jaw Selector - 3 states: Upper active, Lower active, Both active */}
-            <motion.div 
+            {(() => {
+              const activeTabForBite = tabs.find(tab => tab.id === activeTabId);
+              const isBiteAvailableOnTab =
+                activeTabForBite?.label !== "Denture copy" &&
+                !(activeTabForBite?.type === "additional" && workflow === "dentures");
+              return (
+            <motion.div
               className="relative w-[232px] h-[432px]"
               layout
               transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
@@ -1175,30 +1202,41 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
               ) : (
                 <UiJawUpper />
               )}
-              
+
               {/* Click areas overlaid on the jaw selector */}
               {/* Upper Jaw Click Area */}
-              <div 
+              <div
                 className="absolute top-0 left-0 right-0 h-[40%] cursor-pointer z-10"
                 onClick={handleUpperJawClick}
               />
-              {/* Bite/Both Click Area */}
-              <div 
+              {/* Bite/Both Click Area — hidden for Copy Denture and Additional scan in dentures workflow */}
+              {isBiteAvailableOnTab && (
+              <div
                 className="absolute top-[38%] left-[15%] right-[15%] h-[24%] cursor-pointer z-10"
                 onClick={handleBiteClick}
               />
+              )}
               {/* Lower Jaw Click Area */}
-              <div 
+              <div
                 className="absolute bottom-0 left-0 right-0 h-[40%] cursor-pointer z-10"
                 onClick={handleLowerJawClick}
               />
             </motion.div>
-            
+            );
+            })()}
+
             {/* Jaw Scan Button */}
             <div className="mt-[16px] w-full">
               {(() => {
                 const jawState = getTabJawState(activeTabId);
-                const isAlreadyScanned = !!(currentJaw && jawState[currentJaw as keyof typeof jawState] && !activeBiteOptions.includes('Left lateral'));
+                const biteScannedOnReference = referenceBiteLayerId
+                  ? getTabJawState(referenceBiteLayerId).bite
+                  : jawState.bite;
+                const isAlreadyScanned = !!(currentJaw && (
+                  currentJaw === 'bite'
+                    ? (biteScannedOnReference && !activeBiteOptions.includes('Left lateral'))
+                    : (jawState[currentJaw as keyof typeof jawState] && !activeBiteOptions.includes('Left lateral'))
+                ));
                 const isDisabled = !currentJaw || isScanning || isAlreadyScanned;
                 const jawLabel = activeBiteOptions.length > 0
                   ? getBiteDisplayName(activeBiteOptions[0])
@@ -1367,7 +1405,12 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
           {/* 3D Teeth Model - Show when scanning, jaw scanned, or undo panel is open */}
           {(isScanning || isUndoPanelOpen || hasAppliedUndoState || (currentJaw && (
             currentJaw === 'bite'
-              ? (getTabJawState(activeTabId).upper || getTabJawState(activeTabId).lower || getTabJawState(activeTabId).bite)
+              ? (
+                  getTabJawState(activeTabId).upper ||
+                  getTabJawState(activeTabId).lower ||
+                  getTabJawState(activeTabId).bite ||
+                  (referenceBiteLayerId ? getTabJawState(referenceBiteLayerId).bite : false)
+                )
               : getTabJawState(activeTabId)[currentJaw]
           ))) && (() => {
             const activeTab = tabs.find(tab => tab.id === activeTabId);
@@ -1425,7 +1468,7 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
 
         {/* Prep Copilot - full experience: 3D viewer + overlays + side panel */}
         {isCopilotActive && (
-          <PrepCopilotExperience onClose={() => setIsCopilotActive(false)} toolbarCollapsed={isToolbarCollapsed} />
+          <PrepCopilotExperience onClose={() => setIsCopilotActive(false)} toolbarCollapsed={isToolbarCollapsed} toothTreatments={toothTreatments} />
         )}
       </div>
 

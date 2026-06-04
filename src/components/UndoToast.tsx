@@ -11,6 +11,12 @@ interface UndoApplyBadgeProps {
   onApply: () => void;
 }
 
+interface BiteNavigationBannerProps {
+  title: string;
+  body: string;
+  visible: boolean;
+}
+
 function CheckIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -34,6 +40,43 @@ export function UndoToast({ message, visible }: UndoToastProps) {
           style={{ fontFamily: 'Roboto, sans-serif' }}
         >
           {message}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+/**
+ * iTero-style information banner — matches the Banner component in Figma.
+ * Blue left accent border, light blue background, bold title + regular body.
+ * Slides up from the bottom, auto-dismisses after 5 seconds.
+ */
+export function BiteNavigationBanner({ title, body, visible }: BiteNavigationBannerProps) {
+  return (
+    <AnimatePresence>
+      {visible && (
+        <motion.div
+          key={title + body}
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 16 }}
+          transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+          className="pointer-events-none select-none shadow-lg"
+          style={{
+            width: 620,
+            background: '#DFF5FC',
+            borderLeft: '12px solid #00ADEF',
+            fontFamily: 'Roboto, sans-serif',
+          }}
+        >
+          <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <p style={{ margin: 0, fontSize: 18, fontWeight: 700, lineHeight: '24px', color: '#3E3D40', fontVariationSettings: '"wdth" 100' }}>
+              {title}
+            </p>
+            <p style={{ margin: 0, fontSize: 18, fontWeight: 400, lineHeight: '28px', color: '#3E3D40', fontVariationSettings: '"wdth" 100' }}>
+              {body}
+            </p>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>
@@ -79,4 +122,25 @@ export function useUndoToast() {
   }, [visible, message]);
 
   return { message, visible, show };
+}
+
+/** Hook: manages a self-dismissing bite navigation banner with title + body. Auto-dismisses after 5s. */
+export function useBiteToast() {
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [visible, setVisible] = useState(false);
+
+  const show = (t: string, b: string) => {
+    setTitle(t);
+    setBody(b);
+    setVisible(true);
+  };
+
+  useEffect(() => {
+    if (!visible) return;
+    const id = setTimeout(() => setVisible(false), 5000);
+    return () => clearTimeout(id);
+  }, [visible, title]);
+
+  return { title, body, visible, show };
 }

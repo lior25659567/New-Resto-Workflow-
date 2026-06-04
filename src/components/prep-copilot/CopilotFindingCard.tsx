@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import type { ViewFinding, ViewId, ZoneReduction, ZoneId, MaterialType } from './types';
-import { ZONE_LABELS, MATERIAL_LABELS, MATERIAL_THRESHOLDS } from './constants';
+import type { ViewFinding, ViewId, ZoneReduction, ZoneId, MaterialType, CaseType, InsertionPathAngles, UndercutSeverityLevel } from './types';
+import { ZONE_LABELS, MATERIAL_LABELS, MATERIAL_THRESHOLDS, UNDERCUT_SEVERITY_COLORS } from './constants';
 
 interface CopilotFindingCardProps {
   activeView: ViewId | null;
@@ -9,6 +9,15 @@ interface CopilotFindingCardProps {
   selectedZone?: ZoneId | null;
   selectedMaterial: MaterialType;
   onZoneSelect?: (zone: ZoneId) => void;
+  // Insertion path controls
+  insertionPath?: InsertionPathAngles;
+  onInsertionPathChange?: (updates: Partial<InsertionPathAngles>) => void;
+  onResetInsertionPath?: () => void;
+  // Case / bridge context
+  caseType?: CaseType;
+  linkedTeeth?: number[];
+  isBridgeMode?: boolean;
+  onToggleBridgeMode?: () => void;
 }
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; border: string }> = {
@@ -17,10 +26,36 @@ const STATUS_COLORS: Record<string, { bg: string; text: string; border: string }
   fail: { bg: '#FEE2E2', text: '#991B1B', border: '#FCA5A5' },
 };
 
-export default function CopilotFindingCard({ activeView, finding, zoneReductions, selectedZone, selectedMaterial, onZoneSelect }: CopilotFindingCardProps) {
+function getPathStatus(azimuth: number, elevation: number): { text: string; color: string; bg: string } {
+  const total = Math.sqrt(azimuth ** 2 + elevation ** 2);
+  if (total < 3) return { text: 'Optimal — minimal undercut exposure', color: '#166534', bg: '#dcfce7' };
+  if (total < 8) return { text: `${total.toFixed(1)}° from optimal — minor undercut risk`, color: '#713f12', bg: '#fef9c3' };
+  if (total < 15) return { text: `${total.toFixed(1)}° from optimal — moderate undercuts`, color: '#7c2d12', bg: '#ffedd5' };
+  return { text: `${total.toFixed(1)}° from optimal — significant undercuts`, color: '#7f1d1d', bg: '#fee2e2' };
+}
+
+export default function CopilotFindingCard({
+  activeView,
+  finding,
+  zoneReductions,
+  selectedZone,
+  selectedMaterial,
+  onZoneSelect,
+  insertionPath,
+  onInsertionPathChange,
+  onResetInsertionPath,
+  caseType,
+  linkedTeeth,
+  isBridgeMode,
+  onToggleBridgeMode,
+}: CopilotFindingCardProps) {
   if (!finding || !activeView) return null;
 
   const statusStyle = STATUS_COLORS[finding.status];
+  const showPathControls = (activeView === 'insertion' || activeView === 'undercuts') && insertionPath;
+  const showUndercutLegend = activeView === 'undercuts';
+  const showBridgeToggle = showPathControls && caseType === 'bridge' && linkedTeeth && linkedTeeth.length >= 2;
+  const pathStatus = insertionPath ? getPathStatus(insertionPath.azimuth, insertionPath.elevation) : null;
 
   return (
     <AnimatePresence mode="wait">
@@ -60,9 +95,145 @@ export default function CopilotFindingCard({ activeView, finding, zoneReductions
           </div>
         </div>
 
+        {/* ── Insertion path + undercut section ───────────────────────────── */}
+        {showPathControls && (
+          <div className="mb-3 space-y-3">
+
+            {/* Bridge mode toggle */}
+            {showBridgeToggle && (
+              <div className="rounded-lg border border-[#e5e7eb] p-3 flex items-center justify-between">
+                <div>
+                  <div className="text-[12px] font-semibold text-[#334155]">Bridge Mode</div>
+                  <div className="text-[11px] text-[#64748b]">
+                    {isBridgeMode
+                      ? `Common path for ${linkedTeeth!.map(a => `#${a}`).join(' + ')}`
+                      : 'Analyze teeth individually'}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={onToggleBridgeMode}
+                  className="rounded-full px-3 py-1 text-[12px] font-semibold transition-all"
+                  style={{
+                    background: isBridgeMode ? '#009ACE' : '#f1f5f9',
+                    color: isBridgeMode ? '#fff' : '#475569',
+                  }}
+                >
+                  {isBridgeMode ? 'Linked' : 'Individual'}
+                </button>
+              </div>
+            )}
+
+            {/* Insertion vector controls */}
+            <div className="rounded-lg border border-[#dbeafe] bg-[#f8fbff] p-3.5">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[13px] font-semibold text-[#334155]">Insertion Vector</span>
+                <button
+                  type="button"
+                  onClick={onResetInsertionPath}
+                  className="flex items-center gap-1 text-[11px] font-semibold text-[#009ACE] hover:underline"
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                    <path d="M3 3v5h5" />
+                  </svg>
+                  Reset to Optimal
+                </button>
+              </div>
+
+              {/* Lateral tilt (azimuth) */}
+              <div className="mb-3">
+                <div className="flex justify-between text-[11px] text-[#64748b] mb-1.5">
+                  <span>Lateral tilt</span>
+                  <span className="font-medium text-[#334155]">
+                    {insertionPath!.azimuth > 0
+                      ? `${insertionPath!.azimuth}° buccal`
+                      : insertionPath!.azimuth < 0
+                        ? `${Math.abs(insertionPath!.azimuth)}° lingual`
+                        : 'Centered'}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={-30}
+                  max={30}
+                  step={1}
+                  value={insertionPath!.azimuth}
+                  onChange={e => onInsertionPathChange?.({ azimuth: Number(e.target.value) })}
+                  className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+                  style={{ accentColor: '#009ACE' }}
+                />
+                <div className="flex justify-between text-[9px] text-[#94a3b8] mt-0.5">
+                  <span>Lingual</span>
+                  <span>Buccal</span>
+                </div>
+              </div>
+
+              {/* AP tilt (elevation) */}
+              <div>
+                <div className="flex justify-between text-[11px] text-[#64748b] mb-1.5">
+                  <span>A-P tilt</span>
+                  <span className="font-medium text-[#334155]">
+                    {insertionPath!.elevation > 0
+                      ? `${insertionPath!.elevation}° mesial`
+                      : insertionPath!.elevation < 0
+                        ? `${Math.abs(insertionPath!.elevation)}° distal`
+                        : 'Neutral'}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={-15}
+                  max={15}
+                  step={1}
+                  value={insertionPath!.elevation}
+                  onChange={e => onInsertionPathChange?.({ elevation: Number(e.target.value) })}
+                  className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+                  style={{ accentColor: '#009ACE' }}
+                />
+                <div className="flex justify-between text-[9px] text-[#94a3b8] mt-0.5">
+                  <span>Distal</span>
+                  <span>Mesial</span>
+                </div>
+              </div>
+
+              {/* Path status indicator */}
+              {pathStatus && (
+                <div
+                  className="mt-2.5 rounded-md px-2.5 py-1.5 text-[11px] font-medium"
+                  style={{ background: pathStatus.bg, color: pathStatus.color }}
+                >
+                  {pathStatus.text}
+                </div>
+              )}
+            </div>
+
+            {/* Undercut severity legend */}
+            {showUndercutLegend && (
+              <div className="rounded-lg border border-[#e5e7eb] bg-white p-3">
+                <div className="text-[12px] font-semibold text-[#475569] mb-2">Undercut Severity</div>
+                <div className="flex gap-1.5">
+                  {([0, 1, 2, 3] as UndercutSeverityLevel[]).map(s => (
+                    <div key={s} className="flex-1 flex flex-col items-center gap-1">
+                      <div
+                        className="w-full h-2.5 rounded-sm"
+                        style={{ background: UNDERCUT_SEVERITY_COLORS[s].color }}
+                      />
+                      <span className="text-[10px] text-[#64748b]">{UNDERCUT_SEVERITY_COLORS[s].label}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-2 text-[10px] text-[#94a3b8] leading-4">
+                  Hotspots update in real-time as you adjust the insertion vector.
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Zone reduction list (shown in reduction view) */}
         {activeView === 'reduction' && zoneReductions && (
-          <div className="space-y-2">
+          <div className="space-y-2 mb-3">
             <div className="text-[12px] font-semibold text-[#475569] mb-1">Zone Measurements</div>
             {zoneReductions.map(zr => {
               const zs = STATUS_COLORS[zr.status];
@@ -89,25 +260,22 @@ export default function CopilotFindingCard({ activeView, finding, zoneReductions
               );
             })}
 
-            {/* Legend */}
-            {activeView === 'reduction' && (
-              <div className="flex items-center gap-3 mt-2.5 pt-2 border-t border-[#e5e7eb]">
-                <span className="flex items-center gap-1 text-[10px] text-[#64748b]">
-                  <span className="w-2 h-2 rounded-full bg-[#991B1B]" /> Below target
-                </span>
-                <span className="flex items-center gap-1 text-[10px] text-[#64748b]">
-                  <span className="w-2 h-2 rounded-full bg-[#92400E]" /> Minimum
-                </span>
-                <span className="flex items-center gap-1 text-[10px] text-[#64748b]">
-                  <span className="w-2 h-2 rounded-full bg-[#166534]" /> Ideal
-                </span>
-              </div>
-            )}
+            <div className="flex items-center gap-3 mt-2.5 pt-2 border-t border-[#e5e7eb]">
+              <span className="flex items-center gap-1 text-[10px] text-[#64748b]">
+                <span className="w-2 h-2 rounded-full bg-[#991B1B]" /> Below target
+              </span>
+              <span className="flex items-center gap-1 text-[10px] text-[#64748b]">
+                <span className="w-2 h-2 rounded-full bg-[#92400E]" /> Minimum
+              </span>
+              <span className="flex items-center gap-1 text-[10px] text-[#64748b]">
+                <span className="w-2 h-2 rounded-full bg-[#166534]" /> Ideal
+              </span>
+            </div>
           </div>
         )}
 
         {/* Recommendation */}
-        <div className="mt-4 flex items-start gap-2.5 px-3 py-2.5 rounded-md bg-[#f8fafc]">
+        <div className="mt-2 flex items-start gap-2.5 px-3 py-2.5 rounded-md bg-[#f8fafc]">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#009ACE" strokeWidth="2" strokeLinecap="round" className="shrink-0 mt-0.5">
             <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
           </svg>
@@ -172,13 +340,13 @@ function getSmartSuggestions(activeView: ViewId, material: MaterialType): Array<
       ];
     case 'insertion':
       return [
-        { title: 'Path alignment', body: 'Align axial walls to the blue insertion axis to reduce seating deviation.' },
-        { title: 'Consistency', body: 'Avoid abrupt wall angle changes between adjacent surfaces.' },
+        { title: 'Optimal path', body: 'The default path minimizes undercuts. Adjust the sliders to test alternative seating trajectories.' },
+        { title: 'Bridge case', body: 'For bridges, all abutments must share a common insertion path — use bridge mode to evaluate together.' },
       ];
     case 'undercuts':
       return [
-        { title: 'Priority', body: 'Resolve the deepest red undercut first, then reassess adjacent walls.' },
-        { title: 'Verification', body: 'Re-check insertion path after each undercut correction.' },
+        { title: 'Priority', body: 'Resolve the deepest red undercut first, then reassess adjacent walls by tilting the vector.' },
+        { title: 'Verification', body: 'Re-check insertion path after each undercut correction — the heatmap updates in real-time.' },
       ];
     case 'crown':
       return [

@@ -17,9 +17,10 @@ import PrepQcPanel from "./PrepQcPanel";
 interface ToolbarViewProps {
   onActiveToolChange?: (toolId: number | null) => void;
   onMonochromeChange?: (active: boolean) => void;
+  isDentures?: boolean;
 }
 
-export function ToolbarView({ onActiveToolChange, onMonochromeChange }: ToolbarViewProps = {}) {
+export function ToolbarView({ onActiveToolChange, onMonochromeChange, isDentures = false }: ToolbarViewProps = {}) {
   const [selectedTool, setSelectedTool] = useState(-1);
   const [isMonochromeActive, setIsMonochromeActive] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(true);
@@ -38,7 +39,7 @@ export function ToolbarView({ onActiveToolChange, onMonochromeChange }: ToolbarV
     { id: 3, component: IconsMarginLine, label: "Margin line" },
     { id: 4, component: IconsPrepQc, label: "Prep QC" },
     { id: 5, component: IconsTrim, label: "Trim" },
-  ];
+  ].filter(tool => !(isDentures && (tool.id === 3 || tool.id === 4)));
 
   const handleToolClick = (toolId: number) => {
     // Monochrome (0) is an independent toggle — does not affect other tools

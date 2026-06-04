@@ -2,11 +2,37 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import teethModelImg from "../assets/Clincheck weave model.png";
 
+// Figma design asset URLs (valid for 7 days from design fetch)
+const ICON_BRIGHTNESS  = "https://www.figma.com/api/mcp/asset/47379381-4592-483c-b389-6fdba18ab2e5";
+const ICON_VOLUME_A    = "https://www.figma.com/api/mcp/asset/c9cdf331-a79d-417f-89d7-7f81b06eb694";
+const ICON_VOLUME_B    = "https://www.figma.com/api/mcp/asset/b9fc50dd-3aaa-4aff-aade-9066f9db7c00";
+const ICON_VOLUME_C    = "https://www.figma.com/api/mcp/asset/b6a15cfd-597e-47cd-b86b-7b52e88757c7";
+const ICON_WIFI_A      = "https://www.figma.com/api/mcp/asset/4cc6b08f-4f46-45c5-881b-ed0fbf96d9bb";
+const ICON_WIFI_B      = "https://www.figma.com/api/mcp/asset/93a24203-79ed-4a48-912d-dd5363426fd0";
+const ICON_WIFI_C      = "https://www.figma.com/api/mcp/asset/913f94d2-88d2-4b80-925f-2d8a040b13dd";
+const ICON_WIFI_D      = "https://www.figma.com/api/mcp/asset/02d57ac8-127a-47d4-8ff8-6fcb1a8abdc7";
+const ICON_TIMEZONE    = "https://www.figma.com/api/mcp/asset/cac7be1e-9f8a-42a1-8b0f-8c708b34d1a6";
+const ICON_SCAN        = "https://www.figma.com/api/mcp/asset/e7a27935-8d5a-4019-89e6-9db4dedb3154";
+const ICON_RX          = "https://www.figma.com/api/mcp/asset/3b1d3412-f285-4ecf-8f45-3ab336e39f09";
+const ICON_SIG         = "https://www.figma.com/api/mcp/asset/ffde915e-c422-4b16-be15-80fdd43631fe";
+const ICON_LANG_V1     = "https://www.figma.com/api/mcp/asset/ccf8e055-e91d-4669-be44-c377f2fddae0";
+const ICON_LANG_V2     = "https://www.figma.com/api/mcp/asset/7eee7834-2a22-46e9-9268-4c7f1ce69eeb";
+const ICON_LANG_V3     = "https://www.figma.com/api/mcp/asset/baf7c986-67a2-408a-83b4-96f6b636f40e";
+const ICON_LANG_V4     = "https://www.figma.com/api/mcp/asset/046686fb-59d4-44f6-aa16-64c6cc6c3696";
+const ICON_LOGIN_BG    = "https://www.figma.com/api/mcp/asset/a2379368-7501-4c6c-85f7-51961a631f35";
+const ICON_LOGIN_SVG   = "https://www.figma.com/api/mcp/asset/f10c1856-15db-4e0d-a076-d25661fcfaf9";
+const ICON_DIAG_BG     = "https://www.figma.com/api/mcp/asset/e46ef657-91c5-4123-aaf7-3217f842e134";
+const ICON_DIAG_SVG    = "https://www.figma.com/api/mcp/asset/ccaf689e-d39c-4d36-a07e-29478431156c";
+const ICON_LICENSES    = "https://www.figma.com/api/mcp/asset/92cc3f1c-882a-4092-b1ec-ef5294c034d1";
+const ICON_SYSINFO     = "https://www.figma.com/api/mcp/asset/8a5b26a3-4f26-4665-8884-391cbd64362d";
+const ICON_SYNC        = "https://www.figma.com/api/mcp/asset/7b4d548b-e9ca-4e2f-99cb-0b2701dc8c30";
+const ICON_EXPORT_BG   = "https://www.figma.com/api/mcp/asset/07e73a76-ed66-44eb-8dc9-3aeb9b5209be";
+const ICON_EXPORT_SVG  = "https://www.figma.com/api/mcp/asset/13b7bce3-054f-40cd-b8b1-b6546073d524";
+
 interface SettingsModalProps {
   onClose: () => void;
   canvasBg?: string;
   onCanvasBgChange?: (color: string) => void;
-  overlay?: boolean;
 }
 
 type SettingsPage = 'main' | 'screen-appearance' | 'brightness';
@@ -20,90 +46,196 @@ const BG_THEMES = [
   { color: "#3F3F46", label: "Dark", isDefault: false },
 ];
 
-function BrightnessIcon() {
+/* ── Figma-sourced icon components ── */
+
+function FigmaBrightnessIcon() {
   return (
-    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-      <circle cx="24" cy="24" r="8" stroke="#009ACE" strokeWidth="2.5"/>
-      <path d="M24 6v6M24 36v6M6 24h6M36 24h6M11.5 11.5l4.2 4.2M32.3 32.3l4.2 4.2M36.5 11.5l-4.2 4.2M15.7 32.3l-4.2 4.2" stroke="#009ACE" strokeWidth="2.5" strokeLinecap="round"/>
+    <div className="relative w-[40px] h-[40px]">
+      <img alt="" className="absolute inset-0 w-full h-full object-contain" src={ICON_BRIGHTNESS} />
+    </div>
+  );
+}
+
+function FigmaVolumeIcon() {
+  return (
+    <div className="relative w-[40px] h-[40px]">
+      <div className="absolute" style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 22.2, height: 34.535 }}>
+        <img alt="" className="block w-full h-full" src={ICON_VOLUME_A} />
+      </div>
+      <div className="absolute" style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)', marginLeft: 10.2, width: 5.723, height: 18.156 }}>
+        <img alt="" className="block w-full h-full" src={ICON_VOLUME_B} />
+      </div>
+      <div className="absolute" style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)', marginLeft: 14.41, width: 7.177, height: 25.11 }}>
+        <img alt="" className="block w-full h-full" src={ICON_VOLUME_C} />
+      </div>
+    </div>
+  );
+}
+
+function FigmaWifiIcon() {
+  return (
+    <div className="relative w-[40px] h-[40px] overflow-hidden">
+      <div className="absolute" style={{ inset: '78.22% 43.75% 8.89% 43.36%' }}>
+        <img alt="" className="absolute inset-0 w-full h-full" src={ICON_WIFI_A} />
+      </div>
+      <div className="absolute" style={{ inset: '8.89% 0 63.18% 0' }}>
+        <img alt="" className="absolute inset-0 w-full h-full" src={ICON_WIFI_B} />
+      </div>
+      <div className="absolute" style={{ inset: '31.55% 14.26% 46.97% 14.26%' }}>
+        <img alt="" className="absolute inset-0 w-full h-full" src={ICON_WIFI_C} />
+      </div>
+      <div className="absolute" style={{ inset: '54.39% 29.87% 30.76% 29.51%' }}>
+        <img alt="" className="absolute inset-0 w-full h-full" src={ICON_WIFI_D} />
+      </div>
+    </div>
+  );
+}
+
+function FigmaTimezoneIcon() {
+  return (
+    <div className="relative w-[44px] h-[44px]">
+      <img alt="" className="absolute inset-0 w-full h-full object-contain" src={ICON_TIMEZONE} />
+    </div>
+  );
+}
+
+function FigmaScanIcon() {
+  return (
+    <svg width="43" height="41" viewBox="0 0 43 41" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M31.1272 39.9993L14.2599 23.132C14.0279 22.8853 13.8988 22.5594 13.8988 22.2208C13.8988 21.8821 14.0279 21.5563 14.2599 21.3096L23.0128 12.5567C23.2602 12.3208 23.5889 12.1893 23.9307 12.1893C24.2725 12.1893 24.6012 12.3208 24.8485 12.5567L41.7025 29.4107" stroke="#2BABE2" strokeWidth="2.5" strokeMiterlimit="10"/>
+      <path d="M22.8664 12.7037L14.4061 21.1639L1.70245 6.34519L8.04764 0L22.8664 12.7037Z" stroke="#2BABE2" strokeWidth="2.5" strokeMiterlimit="10"/>
+      <path d="M5.93274 8.4728L10.1762 4.22937" stroke="#2BABE2" strokeWidth="2.5" strokeMiterlimit="10"/>
+      <path d="M22.4786 17.3306L19.036 20.7733C18.8178 20.9914 18.8178 21.3452 19.036 21.5634L25.6579 28.1853C25.8761 28.4035 26.2298 28.4035 26.448 28.1853L29.8906 24.7427C30.1088 24.5245 30.1088 24.1707 29.8907 23.9525L23.2687 17.3306C23.0506 17.1124 22.6968 17.1125 22.4786 17.3306Z" stroke="#2BABE2" strokeWidth="2.5" strokeMiterlimit="10"/>
     </svg>
   );
 }
 
-function VolumeIcon() {
+function FigmaRxIcon() {
   return (
-    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-      <path d="M12 20h6l8-8v24l-8-8h-6a2 2 0 01-2-2v-4a2 2 0 012-2z" stroke="#009ACE" strokeWidth="2.5" strokeLinejoin="round"/>
-      <path d="M32 18a8 8 0 010 12" stroke="#009ACE" strokeWidth="2.5" strokeLinecap="round"/>
-      <path d="M36 14a14 14 0 010 20" stroke="#009ACE" strokeWidth="2.5" strokeLinecap="round"/>
-    </svg>
+    <div className="relative w-[40px] h-[40px] overflow-hidden">
+      <div className="absolute" style={{ inset: '5.81% 6.05% 5.81% 4.65%' }}>
+        <img alt="" className="absolute inset-0 w-full h-full" src={ICON_RX} />
+      </div>
+    </div>
   );
 }
 
-function WifiIcon() {
+function FigmaSignatureIcon() {
   return (
-    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-      <path d="M8 20c8.8-8 23.2-8 32 0" stroke="#009ACE" strokeWidth="2.5" strokeLinecap="round"/>
-      <path d="M13 26c6.1-5.5 15.9-5.5 22 0" stroke="#009ACE" strokeWidth="2.5" strokeLinecap="round"/>
-      <path d="M18 32c3.3-3 8.7-3 12 0" stroke="#009ACE" strokeWidth="2.5" strokeLinecap="round"/>
-      <circle cx="24" cy="37" r="2" fill="#009ACE"/>
-    </svg>
+    <div className="relative w-[45px] h-[45px]">
+      <div className="absolute" style={{ inset: '-0.56%' }}>
+        <img alt="" className="block w-full h-full" src={ICON_SIG} />
+      </div>
+    </div>
   );
 }
 
-function TimeZoneIcon() {
+function FigmaLanguageIcon() {
   return (
-    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-      <circle cx="24" cy="24" r="16" stroke="#009ACE" strokeWidth="2.5"/>
-      <path d="M24 12v12l8 4" stroke="#009ACE" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
+    <div className="relative w-[40px] h-[40px] overflow-hidden">
+      <div className="absolute" style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 36.19, height: 36.19 }}>
+        <img alt="" className="block w-full h-full" src={ICON_LANG_V1} />
+      </div>
+      <div className="absolute" style={{ left: 'calc(50% + 10.95px)', top: 'calc(50% + 1.52px)', transform: 'translate(-50%, -50%)', width: 18.095, height: 19.619 }}>
+        <img alt="" className="block w-full h-full" src={ICON_LANG_V2} />
+      </div>
+      <div className="absolute" style={{ left: 'calc(50% + 10.95px)', top: 'calc(50% - 4.28px)', transform: 'translate(-50%, -50%)', width: 90.476, height: 48.571 }}>
+        <img alt="" className="block w-full h-full" src={ICON_LANG_V3} />
+      </div>
+      <div className="absolute" style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 40.952, height: 33.333 }}>
+        <div className="absolute" style={{ inset: '-4.29% -3.49%' }}>
+          <img alt="" className="block w-full h-full" src={ICON_LANG_V4} />
+        </div>
+      </div>
+    </div>
   );
 }
 
-function ScanSettingsIcon() {
+function FigmaLoginIcon() {
   return (
-    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-      <rect x="16" y="8" width="16" height="32" rx="4" stroke="#009ACE" strokeWidth="2.5"/>
-      <path d="M20 14h8M20 18h8" stroke="#009ACE" strokeWidth="1.5" strokeLinecap="round"/>
-      <circle cx="24" cy="34" r="3" stroke="#009ACE" strokeWidth="2"/>
-      <path d="M22 26h4" stroke="#009ACE" strokeWidth="1.5" strokeLinecap="round"/>
-    </svg>
+    <div className="relative w-[40px] h-[40px] overflow-hidden">
+      <div className="absolute" style={{ inset: '6.49% 89.19% 91.62% 8.11%' }}>
+        <img alt="" className="absolute inset-0 w-full h-full" src={ICON_LOGIN_BG} />
+      </div>
+      <div className="absolute" style={{ left: 'calc(50% + 0.5px)', top: 'calc(50% + 0.07px)', transform: 'translate(-50%, -50%)', width: 24.216, height: 34.811 }}>
+        <img alt="" className="block w-full h-full" src={ICON_LOGIN_SVG} />
+      </div>
+    </div>
   );
 }
 
-function RxSettingsIcon() {
+function FigmaDiagnosticsIcon() {
   return (
-    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-      <path d="M16 10h6c4 0 7 3 7 7s-3 7-7 7h-6V10z" stroke="#009ACE" strokeWidth="2.5"/>
-      <path d="M16 10v28" stroke="#009ACE" strokeWidth="2.5" strokeLinecap="round"/>
-      <path d="M22 24l10 14" stroke="#009ACE" strokeWidth="2.5" strokeLinecap="round"/>
-      <path d="M28 24l-4 6" stroke="#009ACE" strokeWidth="2.5" strokeLinecap="round"/>
-    </svg>
+    <div className="relative w-[40px] h-[40px] overflow-hidden">
+      <div className="absolute" style={{ left: 'calc(50% - 17.35px)', top: 'calc(50% - 17.03px)', transform: 'translate(-50%, -50%)', width: 0.757, height: 0.757 }}>
+        <img alt="" className="block w-full h-full" src={ICON_DIAG_BG} />
+      </div>
+      <div className="absolute" style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 40, height: 40 }}>
+        <img alt="" className="block w-full h-full" src={ICON_DIAG_SVG} />
+      </div>
+    </div>
   );
 }
 
-function SignatureSettingsIcon() {
+function FigmaLicensesIcon() {
   return (
-    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-      <path d="M10 34c4-8 6 4 10-2s4 6 8 0 4 4 8-2 2 6 4 2" stroke="#009ACE" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M10 38h28" stroke="#009ACE" strokeWidth="2" strokeLinecap="round" strokeDasharray="2 3"/>
-    </svg>
+    <div className="relative w-[40px] h-[40px] overflow-hidden">
+      <div className="absolute" style={{ inset: '6.77% 0 6.75% 0' }}>
+        <img alt="" className="absolute inset-0 w-full h-full" src={ICON_LICENSES} />
+      </div>
+    </div>
   );
 }
 
-function LocalizationIcon() {
+function FigmaSysInfoIcon() {
   return (
-    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-      <circle cx="24" cy="24" r="14" stroke="#009ACE" strokeWidth="2.5"/>
-      <ellipse cx="24" cy="24" rx="7" ry="14" stroke="#009ACE" strokeWidth="2"/>
-      <path d="M10 24h28" stroke="#009ACE" strokeWidth="2"/>
-      <path d="M12 17h24M12 31h24" stroke="#009ACE" strokeWidth="1.5"/>
+    <div className="relative w-[40px] h-[40px] overflow-hidden">
+      <div className="absolute" style={{ inset: '4.26% 6.38% 6.38% 4.26%' }}>
+        <img alt="" className="absolute inset-0 w-full h-full" src={ICON_SYSINFO} />
+      </div>
+    </div>
+  );
+}
+
+function FigmaSyncIcon() {
+  return (
+    <div className="relative w-[40px] h-[40px] overflow-hidden">
+      <div className="absolute" style={{ left: 'calc(50% - 0.03px)', top: 'calc(50% - 0.43px)', transform: 'translate(-50%, -50%)', width: 38.063, height: 32.395 }}>
+        <img alt="" className="block w-full h-full" src={ICON_SYNC} />
+      </div>
+    </div>
+  );
+}
+
+function FigmaExportIcon() {
+  return (
+    <div className="relative w-[40px] h-[40px]">
+      <div className="absolute" style={{ inset: '4.94% 94.94% 93.83% 4.07%' }}>
+        <img alt="" className="absolute inset-0 w-full h-full" src={ICON_EXPORT_BG} />
+      </div>
+      <div className="absolute" style={{ left: 'calc(50% - 0.1px)', top: 'calc(50% + 0.05px)', transform: 'translate(-50%, -50%)', width: 45.728, height: 36.147 }}>
+        <img alt="" className="block w-full h-full" src={ICON_EXPORT_SVG} />
+      </div>
+    </div>
+  );
+}
+
+function ScreenAppearanceIcon() {
+  return (
+    <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
+      <rect x="8" y="10" width="32" height="22" rx="3" stroke="#009ACE" strokeWidth="2.5"/>
+      <path d="M18 36h12" stroke="#009ACE" strokeWidth="2.5" strokeLinecap="round"/>
+      <path d="M24 32v4" stroke="#009ACE" strokeWidth="2.5" strokeLinecap="round"/>
+      <circle cx="16" cy="21" r="4" fill="#E0EDF4" stroke="#009ACE" strokeWidth="1.5"/>
+      <circle cx="24" cy="21" r="4" fill="#5F5F5F" stroke="#009ACE" strokeWidth="1.5"/>
+      <circle cx="32" cy="21" r="4" fill="#2C2C2C" stroke="#009ACE" strokeWidth="1.5"/>
     </svg>
   );
 }
 
 function AccountPairingIcon() {
   return (
-    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+    <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
       <circle cx="19" cy="20" r="6" stroke="#009ACE" strokeWidth="2.5"/>
       <circle cx="31" cy="20" r="6" stroke="#009ACE" strokeWidth="2.5"/>
       <path d="M10 38c0-5 4-9 9-9h4" stroke="#009ACE" strokeWidth="2.5" strokeLinecap="round"/>
@@ -114,7 +246,7 @@ function AccountPairingIcon() {
 
 function PinIcon() {
   return (
-    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+    <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
       <rect x="12" y="12" width="6" height="8" rx="1" stroke="#009ACE" strokeWidth="2"/>
       <rect x="21" y="12" width="6" height="8" rx="1" stroke="#009ACE" strokeWidth="2"/>
       <rect x="30" y="12" width="6" height="8" rx="1" stroke="#009ACE" strokeWidth="2"/>
@@ -131,81 +263,6 @@ function PinIcon() {
   );
 }
 
-function LoginSettingsIcon() {
-  return (
-    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-      <rect x="10" y="10" width="28" height="28" rx="4" stroke="#009ACE" strokeWidth="2.5"/>
-      <circle cx="24" cy="20" r="5" stroke="#009ACE" strokeWidth="2"/>
-      <path d="M15 34c0-5 4-9 9-9s9 4 9 9" stroke="#009ACE" strokeWidth="2" strokeLinecap="round"/>
-    </svg>
-  );
-}
-
-function DiagnosticsIcon() {
-  return (
-    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-      <circle cx="24" cy="24" r="14" stroke="#009ACE" strokeWidth="2.5"/>
-      <path d="M24 14v4M24 30v4M14 24h4M30 24h4" stroke="#009ACE" strokeWidth="2" strokeLinecap="round"/>
-      <path d="M17 17l3 3M28 28l3 3M31 17l-3 3M20 28l-3 3" stroke="#009ACE" strokeWidth="2" strokeLinecap="round"/>
-      <circle cx="24" cy="24" r="4" stroke="#009ACE" strokeWidth="2"/>
-    </svg>
-  );
-}
-
-function LicensesIcon() {
-  return (
-    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-      <rect x="10" y="8" width="28" height="32" rx="3" stroke="#009ACE" strokeWidth="2.5"/>
-      <path d="M16 16h16M16 22h16M16 28h10" stroke="#009ACE" strokeWidth="2" strokeLinecap="round"/>
-      <path d="M30 30l2 2 4-4" stroke="#009ACE" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  );
-}
-
-function SystemInfoIcon() {
-  return (
-    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-      <circle cx="24" cy="24" r="14" fill="#009ACE"/>
-      <path d="M24 18v0" stroke="white" strokeWidth="3" strokeLinecap="round"/>
-      <path d="M24 24v10" stroke="white" strokeWidth="3" strokeLinecap="round"/>
-    </svg>
-  );
-}
-
-function SyncConfigIcon() {
-  return (
-    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-      <path d="M14 24a10 10 0 0118-6" stroke="#009ACE" strokeWidth="2.5" strokeLinecap="round"/>
-      <path d="M34 24a10 10 0 01-18 6" stroke="#009ACE" strokeWidth="2.5" strokeLinecap="round"/>
-      <path d="M30 14l2 4 4-2" stroke="#009ACE" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M18 34l-2-4-4 2" stroke="#009ACE" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  );
-}
-
-function PracticeSettingsIcon() {
-  return (
-    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-      <path d="M12 38V18l12-8 12 8v20H12z" stroke="#009ACE" strokeWidth="2.5" strokeLinejoin="round"/>
-      <rect x="20" y="26" width="8" height="12" stroke="#009ACE" strokeWidth="2"/>
-      <path d="M18 22h12" stroke="#009ACE" strokeWidth="2" strokeLinecap="round"/>
-    </svg>
-  );
-}
-
-function ScreenAppearanceIcon() {
-  return (
-    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-      <rect x="8" y="10" width="32" height="22" rx="3" stroke="#009ACE" strokeWidth="2.5"/>
-      <path d="M18 36h12" stroke="#009ACE" strokeWidth="2.5" strokeLinecap="round"/>
-      <path d="M24 32v4" stroke="#009ACE" strokeWidth="2.5" strokeLinecap="round"/>
-      <circle cx="16" cy="21" r="4" fill="#E0EDF4" stroke="#009ACE" strokeWidth="1.5"/>
-      <circle cx="24" cy="21" r="4" fill="#5F5F5F" stroke="#009ACE" strokeWidth="1.5"/>
-      <circle cx="32" cy="21" r="4" fill="#2C2C2C" stroke="#009ACE" strokeWidth="1.5"/>
-    </svg>
-  );
-}
-
 interface SettingsTileProps {
   icon: React.ReactNode;
   label: string;
@@ -216,91 +273,103 @@ function SettingsTile({ icon, label, onClick }: SettingsTileProps) {
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center gap-[6px] py-[12px] px-[8px] rounded-[4px] hover:bg-[#eaeaea] active:bg-[#ddd] transition-colors cursor-pointer"
-      style={{ width: 120 }}
+      className="flex flex-col items-center justify-start hover:bg-[rgba(144,235,255,0.12)] active:bg-[rgba(144,235,255,0.22)] transition-colors cursor-pointer shrink-0"
+      style={{ width: 105, minHeight: 75, background: 'rgba(144,235,255,0)', padding: 0 }}
     >
-      <div className="w-[48px] h-[48px] flex items-center justify-center">
-        {icon}
+      <div className="flex flex-col items-center gap-[15px]">
+        <div className="flex items-center justify-center" style={{ width: 44, height: 44 }}>
+          {icon}
+        </div>
+        <span
+          style={{
+            fontFamily: "'Avenir', 'Avenir Next', sans-serif",
+            fontWeight: 500,
+            fontSize: 14,
+            lineHeight: '20px',
+            color: '#3e3d40',
+            textAlign: 'center',
+            whiteSpace: 'normal',
+            wordBreak: 'break-word',
+          }}
+        >
+          {label}
+        </span>
       </div>
-      <span
-        className="font-['Roboto',sans-serif] font-normal text-[13px] text-[#3e3d40] text-center leading-[16px]"
-        style={{ fontVariationSettings: "'wdth' 100" }}
-      >
-        {label}
-      </span>
     </button>
+  );
+}
+
+function SectionDivider() {
+  return <div className="w-full h-px bg-[#c4c4c4] mb-[20px]" />;
+}
+
+function SectionHead({ title }: { title: string }) {
+  return (
+    <p
+      style={{
+        fontFamily: "'Avenir', 'Avenir Next', sans-serif",
+        fontWeight: 500,
+        fontSize: 18,
+        lineHeight: '19px',
+        color: '#3e3d40',
+        marginBottom: 30,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {title}
+    </p>
   );
 }
 
 function MainPage({ onNavigate, canvasBg, onCanvasBgChange }: { onNavigate: (page: SettingsPage) => void; canvasBg: string; onCanvasBgChange?: (color: string) => void }) {
   return (
-    <div className="flex flex-col gap-[20px]">
-      {/* Device Settings */}
-      <section>
-        <h4
-          className="font-['Roboto',sans-serif] font-medium text-[16px] text-[#3e3d40] mb-[8px] pl-[4px]"
-          style={{ fontVariationSettings: "'wdth' 100" }}
-        >
-          Device Settings
-        </h4>
-        <div className="border-t border-[#d1d1d1] pt-[12px]">
-          <div className="flex flex-wrap gap-[4px]">
-            <SettingsTile icon={<BrightnessIcon />} label="Display Settings" onClick={() => onNavigate('brightness')} />
-            <SettingsTile icon={<VolumeIcon />} label="Volume" />
-            <SettingsTile icon={<WifiIcon />} label="Wi-Fi" />
-            <SettingsTile icon={<TimeZoneIcon />} label="Time Zone" />
-          </div>
+    <div className="flex flex-col">
+      {/* Computer Settings */}
+      <div className="flex flex-col pr-[10px] py-[10px]">
+        <SectionHead title="Computer Settings" />
+        <div className="flex gap-[30px] items-start pb-[38px]">
+          <SettingsTile icon={<FigmaBrightnessIcon />} label="Brightness" onClick={() => onNavigate('brightness')} />
+          <SettingsTile icon={<FigmaVolumeIcon />} label="Volume" />
+          <SettingsTile icon={<FigmaWifiIcon />} label="Wi-Fi" />
+          <SettingsTile icon={<FigmaTimezoneIcon />} label="Time Zone" />
         </div>
-      </section>
+      </div>
+
+      <SectionDivider />
 
       {/* User Settings */}
-      <section>
-        <h4
-          className="font-['Roboto',sans-serif] font-medium text-[16px] text-[#3e3d40] mb-[8px] pl-[4px]"
-          style={{ fontVariationSettings: "'wdth' 100" }}
-        >
-          User Settings
-        </h4>
-        <div className="border-t border-[#d1d1d1] pt-[12px]">
-          <div className="flex flex-nowrap gap-[4px]">
-            <SettingsTile icon={<ScanSettingsIcon />} label="Scan Settings" />
-            <SettingsTile icon={<RxSettingsIcon />} label="Rx Settings" />
-            <SettingsTile icon={<SignatureSettingsIcon />} label="Signature Settings" />
-            <SettingsTile icon={<LocalizationIcon />} label="Localization" />
-            <SettingsTile icon={<AccountPairingIcon />} label="Account Pairing" />
-            <SettingsTile icon={<PinIcon />} label="PIN" />
-            <SettingsTile icon={<ScreenAppearanceIcon />} label="View Appearance" onClick={() => onNavigate('screen-appearance')} />
-          </div>
+      <div className="flex flex-col pr-[10px] py-[10px]">
+        <SectionHead title="User Settings" />
+        <div className="flex gap-[30px] items-start pb-[38px]">
+          <SettingsTile icon={<FigmaScanIcon />} label="Scan Settings" />
+          <SettingsTile icon={<FigmaRxIcon />} label="Rx Settings" />
+          <SettingsTile icon={<FigmaSignatureIcon />} label="Signature Settings" />
+          <SettingsTile icon={<FigmaLanguageIcon />} label="Language" />
+          <SettingsTile icon={<ScreenAppearanceIcon />} label="View Appearance" onClick={() => onNavigate('screen-appearance')} />
         </div>
-      </section>
+      </div>
+
+      <SectionDivider />
 
       {/* System Settings */}
-      <section>
-        <h4
-          className="font-['Roboto',sans-serif] font-medium text-[16px] text-[#3e3d40] mb-[8px] pl-[4px]"
-          style={{ fontVariationSettings: "'wdth' 100" }}
-        >
-          System Settings
-        </h4>
-        <div className="border-t border-[#d1d1d1] pt-[12px]">
-          <div className="flex flex-wrap gap-[4px]">
-            <SettingsTile icon={<LoginSettingsIcon />} label="Login Settings" />
-            <SettingsTile icon={<DiagnosticsIcon />} label="Diagnostics" />
-            <SettingsTile icon={<LicensesIcon />} label="Licenses" />
-            <SettingsTile icon={<SystemInfoIcon />} label="System Information" />
-            <SettingsTile icon={<SyncConfigIcon />} label="Sync Configuration" />
-            <SettingsTile icon={<PracticeSettingsIcon />} label="Practice Settings" />
-          </div>
+      <div className="flex flex-col pr-[10px] py-[10px]">
+        <SectionHead title="System Settings" />
+        <div className="flex gap-[30px] items-start pb-[38px]">
+          <SettingsTile icon={<FigmaLoginIcon />} label="Login" />
+          <SettingsTile icon={<FigmaDiagnosticsIcon />} label="Diagnostics" />
+          <SettingsTile icon={<FigmaLicensesIcon />} label="Licenses" />
+          <SettingsTile icon={<FigmaSysInfoIcon />} label="System Information" />
+          <SettingsTile icon={<FigmaSyncIcon />} label="Sync Configuration" />
+          <SettingsTile icon={<FigmaExportIcon />} label="Export Settings" />
         </div>
-      </section>
-
+      </div>
     </div>
   );
 }
 
 function VariantCards({ canvasBg, onCanvasBgChange }: { canvasBg: string; onCanvasBgChange?: (color: string) => void }) {
   return (
-    <div className="grid grid-cols-3 gap-[12px]">
+    <div className="grid grid-cols-3 gap-[20px] w-full">
       {BG_THEMES.map((theme) => {
         const isSelected = canvasBg === theme.color;
         const isDark = theme.color === '#71717A' || theme.color === '#3F3F46';
@@ -670,22 +739,13 @@ function ScreenAppearancePage({ canvasBg, onCanvasBgChange }: { canvasBg: string
   }, []);
 
   return (
-    <div className="flex flex-col gap-[28px]">
-      {/* Description */}
-      <div className="flex flex-col gap-[6px]">
-        <p
-          className="font-['Roboto',sans-serif] font-medium text-[15px] text-[#3e3d40] leading-[20px]"
-          style={{ fontVariationSettings: "'wdth' 100" }}
-        >
-          Canvas Background
-        </p>
-        <p
-          className="font-['Roboto',sans-serif] font-normal text-[13px] text-[#717073] leading-[18px]"
-          style={{ fontVariationSettings: "'wdth' 100" }}
-        >
-          Select a background color for the View page canvas. This changes the area behind the 3D scan model.
-        </p>
-      </div>
+    <div className="flex flex-col gap-[24px] w-full">
+      <p
+        className="font-['Roboto',sans-serif] font-medium text-[18px] text-[#3e3d40] leading-[24px]"
+        style={{ fontVariationSettings: "'wdth' 100" }}
+      >
+        Choose a canvas background to suit your workspace.
+      </p>
 
       {/* Active variant */}
       {variant === 1 && <VariantCards canvasBg={canvasBg} onCanvasBgChange={onCanvasBgChange} />}
@@ -775,20 +835,12 @@ function DisplaySettingsPage({ canvasBg, onCanvasBgChange }: { canvasBg: string;
 
       {/* Appearance section */}
       <div className="flex flex-col gap-[20px]">
-        <div className="flex flex-col gap-[6px]">
-          <p
-            className="font-['Roboto',sans-serif] font-medium text-[15px] text-[#3e3d40] leading-[20px]"
-            style={{ fontVariationSettings: "'wdth' 100" }}
-          >
-            Canvas Background
-          </p>
-          <p
-            className="font-['Roboto',sans-serif] font-normal text-[13px] text-[#717073] leading-[18px]"
-            style={{ fontVariationSettings: "'wdth' 100" }}
-          >
-            Select a background color for the View page canvas. This changes the area behind the 3D scan model.
-          </p>
-        </div>
+        <p
+          className="font-['Roboto',sans-serif] font-medium text-[18px] text-[#3e3d40] leading-[24px]"
+          style={{ fontVariationSettings: "'wdth' 100" }}
+        >
+          Choose a canvas background to suit your workspace.
+        </p>
 
         {/* Active variant */}
         {variant === 1 && <VariantCards canvasBg={canvasBg} onCanvasBgChange={onCanvasBgChange} />}
@@ -802,7 +854,7 @@ function DisplaySettingsPage({ canvasBg, onCanvasBgChange }: { canvasBg: string;
   );
 }
 
-export default function SettingsModal({ onClose, canvasBg = '#E0EDF4', onCanvasBgChange, overlay = false }: SettingsModalProps) {
+export default function SettingsModal({ onClose, canvasBg = '#E0EDF4', onCanvasBgChange }: SettingsModalProps) {
   const [currentPage, setCurrentPage] = useState<SettingsPage>('main');
 
   const pageTitle = currentPage === 'main' ? 'Settings'
@@ -811,48 +863,83 @@ export default function SettingsModal({ onClose, canvasBg = '#E0EDF4', onCanvasB
 
   return createPortal(
     <div
-      className={`fixed inset-0 flex items-center justify-center ${overlay ? 'bg-black/50' : 'bg-[#6b6b6b]'}`}
+      className="fixed inset-0 flex items-center justify-center"
       style={{ zIndex: 99999, pointerEvents: "auto" }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
-        className="bg-[#f0f0f0] w-[1060px] h-[700px] flex flex-col"
-        style={{ border: '2px solid #1a1a1a', boxShadow: '0px 8px 32px 0px rgba(0,0,0,0.4)' }}
+        className="flex flex-col"
+        style={{
+          width: 898,
+          height: 732,
+          background: '#f4f4f5',
+          border: '1px solid #000',
+        }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex items-center px-[24px] h-[64px] relative shrink-0">
-          {currentPage === 'main' ? (
-            <button
-              onClick={onClose}
-              className="w-[48px] h-[48px] flex items-center justify-center text-[#3FC1F3] hover:text-[#009ACE] transition-colors"
-            >
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 6L6 18M6 6l12 12"/>
-              </svg>
-            </button>
-          ) : (
-            <button
-              onClick={() => setCurrentPage('main')}
-              className="w-[48px] h-[48px] flex items-center justify-center text-[#3FC1F3] hover:text-[#009ACE] transition-colors"
-            >
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M15 18l-6-6 6-6"/>
-              </svg>
-            </button>
-          )}
-          <h3
-            className="absolute left-1/2 -translate-x-1/2 font-['Roboto',sans-serif] font-medium text-[22px] text-[#3e3d40] leading-[28px]"
-            style={{ fontVariationSettings: "'wdth' 100" }}
-          >
-            {pageTitle}
-          </h3>
+        {/* Header — matches Figma HEAD row */}
+        <div className="flex items-start px-[15px] py-[20px] shrink-0 w-full">
+          <div className="flex flex-1 items-start p-[15px] min-w-0">
+            {currentPage === 'main' ? (
+              <button
+                onClick={onClose}
+                className="shrink-0 leading-none hover:opacity-70 transition-opacity"
+                style={{
+                  fontFamily: "'Avenir', 'Avenir Next', sans-serif",
+                  fontWeight: 900,
+                  fontSize: 60,
+                  lineHeight: '34px',
+                  color: '#ace1f5',
+                  width: 36,
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  cursor: 'pointer',
+                }}
+              >
+                ×
+              </button>
+            ) : (
+              <button
+                onClick={() => setCurrentPage('main')}
+                className="shrink-0 leading-none hover:opacity-70 transition-opacity flex items-center"
+                style={{
+                  color: '#ace1f5',
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  cursor: 'pointer',
+                  width: 36,
+                  height: 34,
+                }}
+              >
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ace1f5" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M15 18l-6-6 6-6"/>
+                </svg>
+              </button>
+            )}
+            {/* Centered title */}
+            <div className="flex flex-1 items-center justify-center pr-[36px] min-w-0">
+              <p
+                className="shrink-0 whitespace-nowrap"
+                style={{
+                  fontFamily: "'Avenir', 'Avenir Next', sans-serif",
+                  fontWeight: 500,
+                  fontSize: 24,
+                  lineHeight: '34px',
+                  color: '#3e3d40',
+                }}
+              >
+                {pageTitle}
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-[32px] pb-[32px]">
+        <div className="flex-1 overflow-hidden pb-[30px] flex flex-col w-full" style={{ paddingLeft: 30, paddingRight: currentPage === 'main' ? 90 : 30 }}>
           {currentPage === 'main' && (
             <MainPage onNavigate={setCurrentPage} canvasBg={canvasBg} onCanvasBgChange={onCanvasBgChange} />
           )}

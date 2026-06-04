@@ -29,6 +29,7 @@ interface ToolbarScanProps {
   onUndo?: (action: "undo" | "redo" | "accept") => void;
   /** Which UI variant to use: 1=Bordered, 2=Borderless, 3=Compact, 4=Labeled, 5=Pill, 6=Icons, 7=Stacked, 8=H-Stack */
   undoVariant?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+  hideCopilot?: boolean;
 }
 
 export function ToolbarScan({
@@ -41,6 +42,7 @@ export function ToolbarScan({
   undoState,
   onUndo,
   undoVariant = 1,
+  hideCopilot = false,
 }: ToolbarScanProps = {}) {
   const [selectedTool, setSelectedTool] = useState<number | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(true);
@@ -58,7 +60,7 @@ export function ToolbarScan({
     { id: 3, component: IconsSwapScans, label: "Swap arches" },
     { id: 4, component: PrepCopilotButton, label: "Prep Copilot", isAI: true },
     { id: 5, component: IconsUndo, label: "Undo" },
-  ];
+  ].filter(tool => !(tool.id === 4 && hideCopilot));
 
   const handleToolClick = (toolId: number) => {
     const isCurrentlyActive =
