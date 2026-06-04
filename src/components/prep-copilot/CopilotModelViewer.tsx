@@ -5,10 +5,9 @@ import CopilotScene from './CopilotScene';
 
 interface CopilotModelViewerProps {
   children?: React.ReactNode;
-  hideDefaultModel?: boolean;
 }
 
-export default function CopilotModelViewer({ children, hideDefaultModel }: CopilotModelViewerProps) {
+export default function CopilotModelViewer({ children }: CopilotModelViewerProps) {
   return (
     <div className="relative w-full h-full min-h-0">
       <Canvas
@@ -24,7 +23,7 @@ export default function CopilotModelViewer({ children, hideDefaultModel }: Copil
         dpr={typeof window !== 'undefined' ? window.devicePixelRatio : 1}
       >
         <Suspense fallback={null}>
-          <CopilotScene hideDefaultModel={hideDefaultModel}>{children}</CopilotScene>
+          <CopilotScene>{children}</CopilotScene>
         </Suspense>
       </Canvas>
     </div>

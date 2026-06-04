@@ -6,11 +6,7 @@ import { usePrepCopilotStateMachine } from './usePrepCopilotStateMachine';
 import type { ViewId, ZoneId } from './types';
 import { detectCaseFromTreatments, PANEL_WIDTH } from './constants';
 
-import PrepPulseOverlay from './overlays/PrepPulseOverlay';
-import ReductionHeatmap from './overlays/ReductionHeatmap';
 import MeasuredReductionHeatmap from './overlays/MeasuredReductionHeatmap';
-import MarginLineOverlay from './overlays/MarginLineOverlay';
-import PrepGeometry from './PrepGeometry';
 import CopilotProgressStrip from './CopilotProgressStrip';
 import { PlyUploadDropzone } from './PlyUploadDropzone';
 import { PrepAreaBrushPanel } from './brush/PrepAreaBrushPanel';
@@ -86,9 +82,6 @@ export default function PrepCopilotExperience({ onClose, toolbarCollapsed = true
     startAnalysisFromBrush,
   } = usePrepCopilotStateMachine(true, caseData);
 
-  const [prepPosition] = useState<[number, number, number]>([1.1, 0.1, 0.75]);
-  const [prepRotation] = useState<[number, number, number]>([1.6, 0.8, 0.35]);
-  const [prepScale] = useState(4);
   const [undercutBannerDismissed, setUndercutBannerDismissed] = useState(false);
 
   // Upload state
@@ -151,12 +144,8 @@ export default function PrepCopilotExperience({ onClose, toolbarCollapsed = true
     setBrushedCount(0);
   }, [setBrushedCount]);
 
-  const { activeView, phase, insertionPath } = state;
-  const showPulse = phase === 'detecting' || phase === 'detected';
-  const showReductionHeatmap = activeView === 'reduction' && !state.hasUserModels;
+  const { activeView, phase } = state;
   const showMeasuredHeatmap = activeView === 'reduction' && state.hasUserModels && !!alignmentMatrix && !!brushMask;
-  const showMarginLine = activeView === 'margin';
-  const showInsertionPath = activeView === 'insertion' || activeView === 'undercuts';
 
   const isUploadPhase = phase === 'uploading';
   const isBrushPhase = phase === 'brushing';
@@ -176,19 +165,16 @@ export default function PrepCopilotExperience({ onClose, toolbarCollapsed = true
     <PrepModelsContext.Provider value={prepModelsValue}>
       <div className="absolute inset-0 z-[15]">
         <div className="absolute inset-0" style={{ pointerEvents: 'auto' }}>
-          <CopilotModelViewer hideDefaultModel={state.hasUserModels}>
+          <CopilotModelViewer>
             {/* User's post-treatment model */}
             {state.hasUserModels && upload.post.geometry && (
               <UserPostTreatmentMesh geometry={upload.post.geometry} />
             )}
 
-            {/* Ghost pre-treatment overlay after alignment */}
+            {/* Pre-treatment model aligned on top of post-treatment */}
             {alignmentMatrix && upload.pre.geometry && phase !== 'uploading' && (
               <GhostPretreatmentMesh geometry={upload.pre.geometry} alignmentMatrix={alignmentMatrix} />
             )}
-
-            {/* Simulated reduction heatmap (fallback when no user models) */}
-            <ReductionHeatmap visible={showReductionHeatmap} />
 
             {/* Real measured reduction heatmap */}
             {showMeasuredHeatmap && upload.post.geometry && upload.pre.geometry && alignmentMatrix && brushMask && (
@@ -202,22 +188,6 @@ export default function PrepCopilotExperience({ onClose, toolbarCollapsed = true
                 rotation={USER_MODEL_ROTATION}
               />
             )}
-
-            {/* Margin line */}
-            <MarginLineOverlay visible={showMarginLine} />
-
-            {/* Insertion path arrow */}
-            <PrepGeometry
-              visible={true}
-              showInsertionPath={showInsertionPath}
-              prepPosition={prepPosition}
-              prepRotation={prepRotation}
-              prepScale={prepScale}
-              insertionAzimuth={insertionPath.azimuth}
-              insertionElevation={insertionPath.elevation}
-            />
-
-            <PrepPulseOverlay visible={showPulse} />
           </CopilotModelViewer>
 
           <CopilotProgressStrip
