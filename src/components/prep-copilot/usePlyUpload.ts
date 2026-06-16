@@ -151,7 +151,6 @@ function parsePlyBuffer(buffer: ArrayBuffer): THREE.BufferGeometry {
     geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(idxList), 1));
   }
 
-  geometry.center();
   geometry.computeBoundingBox();
   return geometry;
 }
@@ -183,6 +182,8 @@ export function usePlyUpload(): UsePlyUploadReturn {
     reader.onload = () => {
       try {
         const geometry = parsePlyBuffer(reader.result as ArrayBuffer);
+        geometry.center();
+        geometry.computeBoundingBox();
         setSlot(slot, { geometry, loading: false });
       } catch (e) {
         setSlot(slot, { error: (e as Error).message, loading: false });

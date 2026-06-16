@@ -1,0 +1,257 @@
+Prep Reduction QC
+
+Introduction
+
+Definitions
+
+Tooth Preparation: The process of shaping a tooth to receive a dental crown, ensuring it fits perfectly and functions optimally.
+
+Occlusal Reduction: The removal of tooth structure from the occlusal (chewing) surface to create space for the crown material.
+
+Depth-Determining Grooves: Grooves prepared in the tooth to guide the depth of the occlusal cut.
+
+Functional Cusps: The cusps of the tooth that are involved in chewing and bear significant functional loads.
+
+Non-Functional Cusps: The cusps of the tooth that are not involved in chewing.
+
+Pulp: The innermost part of the tooth containing nerves and blood vessels.
+
+Microleakage: The seepage of bacteria and fluids between the tooth and the crown, which can lead to decay and other issues.
+
+Reduction: in the context of dentistry, refers to the process of removing a portion of a tooth's structure to prepare it for a restoration or to address a clinical issue.
+
+The example below illustrates the prep-reduction criteria for full contour metal/Zirconia crown on a posterior tooth:
+
+Overview of Pre-Treatment Scan and Its Importance
+
+Before starting the tooth preparation process, a pre-treatment scan is essential. This scan provides a detailed view of the tooth's current condition, including any existing restorations, decay, or structural issues. It helps in planning the treatment accurately and ensures that the tooth is prepared in a way that preserves as much healthy tissue as possible. The scan also aids in identifying the exact amount of tooth reduction needed, ensuring that the final crown fits perfectly and functions optimally.
+
+Preview of the Prep Reduction Procedure
+
+The tooth preparation process involves several key steps to ensure the best possible outcomes for the patient. The occlusal reduction is crucial for creating space for the crown material while maintaining the tooth’s natural anatomy. The aim is to achieve approximately 1.5 mm clearance on functional cusps and 1.0 mm on non-functional cusps. 
+
+Importance of Checking Tooth Tissue Reduction
+
+It's important to check how much tooth tissue was reduced during the preparation for several reasons.
+
+Preserving tooth structure is crucial to avoid over-preparing the tooth and protect the pulp.
+
+Ensuring adequate reduction is necessary to create space for a strong, long-lasting crown.
+
+Proper reduction helps maintain the natural anatomical form of the tooth, which is essential for both functional and aesthetic purposes.
+
+Checking the reduction ensures that the crown will fit well and stay in place, preventing dislodgement and microleakage. By following these guidelines, you can achieve a well-fitting, functional, and aesthetically pleasing dental crown.
+
+Clinical Workflow
+
+The clinical workflow begins with the pre-treatment scan. 
+
+After post-processing, in the view tool the user will have the option to click on dedicated button to view the pre-treatment jaw on top of the post-treatment jaw with the preparation, and visualize the reduction heatmap. 
+
+Button enablement
+
+The button shall be enabled per a success criteria related to registration accuracy. In case where number of contact points (points with distances < 50 micron) is lower than pre-defined threshold, the tools shall not be enabled and will be deemed. The threshold shall be selected based on specific cases pre-filtered with registration issues, vs. cases with good alignment.
+
+Source: \\prdil1data01\scan_test_repository\RnD_Data\Investigations\TR-62981 «Lumina» Fixed Resto & Implant-based Registration Improvements
+
+Heat-map calculation:
+
+The definition of calculation is depicted below: 
+
+For each point on the post-treatment (prep), calculate the shortest distance from the pre-treatment surface.
+
+Filter out distances below 100 microns.
+
+Filter out detected gingiva.
+
+Filter out detected Scan body - nice to have.
+
+The heatmap with calculated distances will be shown on the post-treatment (prep scan).
+
+The scaling used to visualize the heat-map shall be adaptive and selected in the User Interface: 100micron/200micron scale.
+
+Scaling options as depicted below:
+
+0.1 till 1.4 in 100micron increments
+
+0.2 till 2.4 in 200micron increments
+
+Visualization
+
+The calculation outputs of the prep-QC shall be visualized in the view tool:
+
+Default Visualization Scenarios
+
+Scenario
+
+Workflow Type
+
+Tool Context
+
+Default View Behavior
+
+Opacity Default
+
+1
+
+Implant-based
+
+Default View
+
+Show working arch with Treatment scan
+
+100% 
+
+2
+
+Non-Implant (tooth-based)
+
+Default View
+
+Show working arch with Treatment scan
+
+100%
+
+3
+
+Implant-based
+
+OCC
+
+Show working arch with Treatment scan
+Show OCC only for Treatment scan
+
+100% opacity, disable tuning
+
+4
+
+Non-Implant (tooth-based)
+
+OCC
+
+Show working arch with Treatment scan
+Show OCC only for Treatment scan
+
+100% opacity, disable tuning
+
+5
+
+Implant-based
+
+IOC
+
+Show working arch with Treatment scan
+Hide layer visualization menu
+
+100%
+
+6
+
+Non-Implant (tooth-based)
+
+IOC
+
+Show working arch with Treatment scan
+Hide layer visualization menu
+
+100%
+
+7
+
+Implant-based
+
+Prep Reduction Tool
+
+Show Scan role #1 and Treatment scan:
+Pre treatment and Treatment scan or, in case Pre treatment was not acquired: Emergence Profile and Treatment scan.
+
+Scan role #1 - 50%
+Treatment scan - 100%
+Other layers - OFF, enabled
+
+8
+
+Non-Implant (tooth-based)
+
+Prep Reduction Tool
+
+Show Pre treatment and Treatment scan.
+
+Pre treatment - 50%
+Treatment scan - 100%
+Other layers - OFF, enabled
+
+9
+
+Implant-based
+
+Margin Line Tool
+
+Show working arch with Treatment scan
+Hide layer visualization menu
+
+100%
+
+10
+
+Non-Implant (tooth-based)
+
+Margin Line Tool
+
+Show Treatment scan layer (Scan role#1 if no pre-treatment, Scan role #2 if pre-treatment exist)
+Hide layer visualization menu
+
+100%
+
+11
+
+Fixed-Resto with Multi-bite (Implant-based / Non-Implant-based)
+
+Default View
+
+In case of navigation between the bites, show Scan role #1 and allow to navigate between the multiple bites captured. 
+Hide layer visualization menu
+
+100%
+
+12
+
+Implant-based
+
+Trim Tool
+
+Scenario1 - only one phased layer is shown, open the trim tool on it. 
+Scenario2 - more than one phased layer is shown, show working arch with Treatment scan.
+Allow user to switch to another layer by turning the eye ON, by that switch the off the previous eye.
+
+100% opacity, disable tuning
+
+13
+
+Non-Implant (tooth-based)
+
+Trim Tool
+
+Scenario1 - only one phased layer is shown, open the trim tool on it. 
+Scenario2 - more than one phased layer is shown, show working arch with Treatment scan.
+Allow user to switch to another layer by turning the eye ON, by that switch the off the previous eye.
+
+100% opacity, disable tuning
+
+Prep-Reduction Visualization
+
+Once clicking on Prep-reduction tool, the layers visualized by default shall be all jaw layers Registration criteria flag True, example - Upper Pre-treatment and Treatment scan + Lower Pre-treatment and Treatment scan, regardless of the Lower/Upper controllers pre-selection.
+
+Navigation to the other jaws shall be allowed. Navigation to additional bites shall not be allowed.
+
+The Prep reduction tool heatmap scale shall be persistent through the session (100 or 200micron).
+
+Visualization menu controllers
+
+The Visualization menu shall show all scanned layers available, with adaptation to the eye controller in sync with jaw controller.
+
+The visualization menu should be displayed for all procedures but only if there is more than one layer scanned.
+
+Persistency in transition between screens/tools
+
+The application shall perform minimum changes in visualization, in transition between states, while keeping the layers context. In case where the current visualization meets the criteria of the selected state function, the application shall not apply changes in visualization.

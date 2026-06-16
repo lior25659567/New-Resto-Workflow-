@@ -13,6 +13,7 @@ interface MeasuredReductionHeatmapProps {
   scale?: number;
   rotation?: [number, number, number] | readonly [number, number, number];
   onStats?: (stats: ReductionStats) => void;
+  recomputeKey?: number;
 }
 
 export interface ReductionStats {
@@ -53,6 +54,7 @@ export default function MeasuredReductionHeatmap({
   scale = 0.035,
   rotation = [Math.PI * 0.6, 0, Math.PI],
   onStats,
+  recomputeKey = 0,
 }: MeasuredReductionHeatmapProps) {
   const startTimeRef = useRef<number | null>(null);
   const [computed, setComputed] = useState(false);
@@ -138,7 +140,8 @@ export default function MeasuredReductionHeatmap({
     geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
     return { heatmapGeo: geo, targetColors: targets, baseColors: base };
-  }, [postGeometry, preGeometry, alignmentMatrix, brushMask, onStats]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [postGeometry, preGeometry, alignmentMatrix, brushMask, onStats, recomputeKey]);
 
   useEffect(() => {
     if (heatmapGeo) setComputed(true);

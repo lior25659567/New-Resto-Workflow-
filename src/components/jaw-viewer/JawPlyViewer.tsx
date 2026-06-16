@@ -23,7 +23,9 @@ const GHOST_SHEEN = new THREE.Color(0xd7d2ef);
 const GHOST_OPACITY = 0.45;
 const TOTAL_STEPS = 10;
 const MESH_SCALE = 0.035;
-const UPPER_ROT: [number, number, number] = [Math.PI * 0.6, 0, Math.PI];
+// Upper arch flipped 180° (crowns down) to match the scan-guidance orientation.
+// Equivalent to rolling the old [0.6π, 0, π] 180° about the view axis.
+const UPPER_ROT: [number, number, number] = [-Math.PI * 0.6, 0, 0];
 const LOWER_ROT: [number, number, number] = [Math.PI * 0.6, Math.PI, Math.PI];
 // Width of the dithered dissolve band as a fraction of model world-X span.
 const REVEAL_FEATHER_RATIO = 0.12;

@@ -1,0 +1,159 @@
+✅ Refined Prompt (ready to paste into Replit)
+Goal:
+Refactor the application into two distinct stages: Pre-Processing (Pre-Entry) and Main Application (Interactive Analysis), with a clear transition and preserved state.
+
+✅ Part 1 — Pre-Entry Stage (Preparation & Configuration)
+Create a dedicated pre-entry stage that runs after loading the .ply files and before entering the main app.
+This stage should include:
+
+
+Mesh Loading & Alignment
+
+Load .ply files
+Allow manual or assisted alignment between meshes
+
+
+
+Prep Labeling
+
+Enable interactive labeling of the preparation region (vertex painting / segmentation)
+
+
+
+Cross-Section Setup
+
+Allow the user to define one or more cross-sections
+Save the selected default cross-section
+
+
+
+Undercut Insertion Path Selection
+
+Allow the user to define and interactively adjust the insertion direction vector
+Provide immediate visual feedback (e.g., undercut preview)
+
+
+
+Zoom to Prep
+
+Enable zoom-to-selected-prep functionality and persist camera position
+
+
+
+
+✅ State Persistence
+Create a PreState object that stores:
+
+aligned geometries
+prepMask / labeled vertices
+insertion vector
+selected cross-section(s)
+camera position / target
+scale normalization (if applied)
+
+
+✅ Transition
+Add a button:
+👉 “Go to App”
+When clicked:
+
+Save the full PreState
+Initialize Part 2 (Main App) using this state
+
+
+✅ Part 2 — Main Application (Simplified + Guided Interaction)
+Refactor the main application to:
+
+✅ Remove all preprocessing tools (alignment, labeling, etc.)
+✅ Use only the PreState as input
+✅ Focus on analysis and interaction via guided flow
+
+
+✅ App Entry Flow
+When the app opens:
+
+
+Show message:
+
+“System detected a preparation. Would you like to continue to Auto Prep Check?”
+
+
+
+If user selects Yes:
+
+Restore:
+
+Zoomed prep view
+Camera state
+
+
+Show analysis options:
+
+
+
+
+✅ User Interaction Options
+1. Show Undercuts
+
+Display undercut heatmap
+Allow interactive manipulation of insertion vector
+Update analysis in real time
+
+
+2. Show Reduction Heatmap
+
+
+Display reduction/thickness heatmap (based on prep vs reference)
+
+
+Provide visual + quantitative analysis
+
+
+Enable user question:
+
+“Did I reduce enough tooth structure?”
+
+
+
+Respond with analysis based on selected material (default: Zirconia)
+
+
+
+✅ Material-Based Analysis
+
+Allow user to select material (e.g., Zirconia, others TBD)
+Update thresholds dynamically (e.g., required thickness)
+Update feedback accordingly
+
+
+✅ Cross-Section Interaction
+
+Automatically show the pre-configured cross-section from PreState
+Allow user to:
+
+Switch views
+Adjust cross-section interactively
+
+
+
+
+✅ Re-Drill Option (Return to Scanning Mode)
+Add option:
+👉 “Re-drill”
+
+Reset workflow
+Return to scanning / pre-entry stage
+Disable auto-prep-check mode
+
+
+✅ Design Guidelines
+
+Maintain clean separation:
+
+PreEntryStage
+MainApp
+
+
+Use a shared state model (PreState)
+Avoid duplicating logic between stages
+Prioritize smooth UX transitions

@@ -1,0 +1,31 @@
+B. Undercut utilities
+For prep analysis, “undercut” is typically defined relative to an insertion direction.
+A practical first-pass rule:
+
+Let d = insertion direction (normalized)
+Let n = surface normal (normalized)
+A point is undercut if the normal faces “against” the insertion direction more than a threshold
+
+A simple score is:
+TypeScriptscore = -n.dot(d)Show more lines
+Interpretation:
+
+near 0 → neutral / parallel
+positive and large → stronger undercut risk
+
+
+computeVertexUndercutScores
+Fast per-vertex undercut map.
+TypeScriptimport * as THREE from 'three';export type UndercutVertexResult = {  scores: Float32Array;  isUndercut: Uint8Array;  minScore: number;  maxScore: number;};export function computeVertexUndercutScores(  geometry: THREE.BufferGeometry,  insertionDirection: THREE.Vector3,  threshold = 0.15): UndercutVertexResult {  const g = geometry.clone();  g.computeVertexNormals();  const normalAttr = g.getAttribute('normal') as THREE.BufferAttribute;  const dir = insertionDirection.clone().normalize();  const scores = new Float32Array(normalAttr.count);  const isUndercut = new Uint8Array(normalAttr.count);  let minScore = Infinity;  let maxScore = -Infinity;  const n = new THREE.Vector3();  for (let i = 0; i < normalAttr.count; i++) {    n.fromBufferAttribute(normalAttr, i).normalize();    // positive means more opposing the insertion direction    const score = Math.max(0, -n.dot(dir));    scores[i] = score;    isUndercut[i] = score > threshold ? 1 : 0;    if (score < minScore) minScore = score;    if (score > maxScore) maxScore = score;  }  return { scores, isUndercut, minScore, maxScore };}Show more lines
+
+addUndercutColorAttribute
+Creates a vertex color heatmap for rendering.
+TypeScriptexport function addUndercutColorAttribute(  geometry: THREE.BufferGeometry,  scores: Float32Array,  maxVisualScore = 0.6): THREE.BufferGeometry {  const g = geometry.clone();  const count = scores.length;  const colors = new Float32Array(count * 3);  for (let i = 0; i < count; i++) {    const t = Math.min(scores[i] / maxVisualScore, 1);    // blue -> cyan -> yellow -> red    const r = t < 0.5 ? 2 * t : 1;    const gCol = t < 0.5 ? 1 : 2 * (1 - t);    const b = t < 0.5 ? 1 : 0;    colors[i * 3 + 0] = r;    colors[i * 3 + 1] = gCol;    colors[i * 3 + 2] = b;  }  g.setAttribute('color', new THREE.BufferAttribute(colors, 3));  return g;}Show more lines
+Use with a material like:
+TypeScriptconst material = new THREE.MeshStandardMaterial({  vertexColors: true,  side: THREE.DoubleSideShow more lines
+
+computeUndercutAreaApproxMm2
+Estimates undercut area from triangles.
+This is much more useful than only flagging vertices.
+TypeScriptexport function computeUndercutAreaApproxMm2(  geometry: THREE.BufferGeometry,  insertionDirection: THREE.Vector3,  threshold = 0.15): number {  const g = geometry.index ? geometry.toNonIndexed() : geometry.clone();  g.computeVertexNormals();  const pos = g.getAttribute('position') as THREE.BufferAttribute;  const normal = g.getAttribute('normal') as THREE.BufferAttribute;  const a = new THREE.Vector3();  const b = new THREE.Vector3();  const c = new THREE.Vector3();  const na = new THREE.Vector3();  const nb = new THREE.Vector3();  const nc = new THREE.Vector3();  const ab = new THREE.Vector3();  const ac = new THREE.Vector3();  const dir = insertionDirection.clone().normalize();  let area = 0;  for (let i = 0; i < pos.count; i += 3) {    a.fromBufferAttribute(pos, i);    b.fromBufferAttribute(pos, i + 1);    c.fromBufferAttribute(pos, i + 2);    na.fromBufferAttribute(normal, i).normalize();    nb.fromBufferAttribute(normal, i + 1).normalize();    nc.fromBufferAttribute(normal, i + 2).normalize();    const sa = Math.max(0, -na.dot(dir));    const sb = Math.max(0, -nb.dot(dir));    const sc = Math.max(0, -nc.dot(dir));    const undercutFraction =      [sa > threshold, sb > threshold, sc > threshold].filter(Boolean).length / 3;    if (undercutFraction === 0) continue;    ab.subVectors(b, a);    ac.subVectors(c, a);    const triArea = ab.clone().cross(ac).length() * 0.5;    area += triArea * undercutFraction;  }  return area;}Show more lines
+

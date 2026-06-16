@@ -29,9 +29,10 @@ import UndoStacked from "../components/UndoStacked";
 import UndoHorizontalStacked from "../components/UndoHorizontalStacked";
 import UndoLabeledChip from "../components/UndoLabeledChip";
 import ScanGuidanceViewer from "../components/scan-guidance/ScanGuidanceViewer";
-import PrepCopilotExperience from "../components/prep-copilot/PrepCopilotExperience";
+import { PrepQC } from "../components/prep-qc/PrepQC";
 import JawPlyViewer from "../components/jaw-viewer/JawPlyViewer";
 import { UndoToast, useUndoToast, BiteNavigationBanner, useBiteToast } from "../components/UndoToast";
+// BiteUnderTabToast is rendered inside ChromeTabs via props
 import imgEmergenceProfile from "figma:asset/59c5249493a5cf8767547ab4edc771958cf79908.png";
 import imgScanWand from "figma:asset/6aa095904da22b160466272b62feb75140332534.png";
 import implantUpperArchScan from "figma:asset/0739b756c08b73712f33f02a9c7bb00b11f87b89.png";
@@ -190,6 +191,9 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
   
   // Banner for bite layer navigation
   const biteLayerToast = useBiteToast();
+
+  // Notification style: "top" = centered banner at top of canvas, "under-tab" = toast below the reference bite tab
+  const [biteNotifStyle, setBiteNotifStyle] = useState<"top" | "under-tab">("top");
   
   // Helper to get jaw state for a tab
   const getTabJawState = (tabId: string) => tabJawStates[tabId] || { upper: false, lower: false, bite: false };
@@ -461,8 +465,8 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
           setActiveBiteOptions([option]);
           
           biteLayerToast.show(
-            `Bite already captured in ${referenceTab.label}`,
-            `You selected a bite option, but the bite was already scanned in ${referenceTab.label} — so we moved you there. All upper and lower jaws register relative to this layer.`
+            `Bite Already Scanned`,
+            `Bite was already captured on ${referenceTab.label} layer.`
           );
           
           return;
@@ -562,8 +566,8 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
         setActiveTabId(referenceBiteLayerId);
         setCurrentJaw('bite');
         biteLayerToast.show(
-          `Bite already captured in ${referenceTab.label}`,
-          `You pressed bite, but it was already scanned in ${referenceTab.label} — so we moved you there. All upper and lower jaws register relative to this layer.`
+          `Bite Already Scanned`,
+          `Bite was already captured on ${referenceTab.label} layer.`
         );
         return;
       } else {
@@ -1039,7 +1043,7 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
 
       {/* Chrome Tabs - Below Header, with solid background (no gradient) */}
       <div style={{ backgroundColor: tabs.find(tab => tab.id === activeTabId)?.type === 'pre-treatment' ? '#C5EAD0' : solidColor(canvasBg) }}>
-        <ChromeTabs 
+        <ChromeTabs
           tabs={tabs}
           activeTabId={activeTabId}
           setActiveTabId={setActiveTabId}
@@ -1055,6 +1059,12 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
           onStudyModelAdditionalBiteToggle={() => setHasStudyModelAdditionalBite(!hasStudyModelAdditionalBite)}
           isScanning={isScanning}
           onDeleteTab={handleDeleteTab}
+          underTabToast={biteNotifStyle === "under-tab" ? {
+            title: biteLayerToast.title,
+            body: biteLayerToast.body,
+            visible: biteLayerToast.visible,
+          } : undefined}
+          underTabToastAnchorId={biteNotifStyle === "under-tab" ? referenceBiteLayerId : null}
         />
       </div>
       
@@ -1064,6 +1074,7 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
         <div className="absolute right-4 top-4 z-50">
           <ToolbarScan
             hideCopilot={workflow === "dentures"}
+            copilotActive={isCopilotActive}
             onPrepEditChange={setIsPrepEditOpen}
             onCopilotChange={setIsCopilotActive}
             onCollapseChange={setIsToolbarCollapsed}
@@ -1091,14 +1102,16 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
           />
         </div>
 
-        {/* Bite Layer Navigation Banner */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[70] pointer-events-none">
-          <BiteNavigationBanner
-            title={biteLayerToast.title}
-            body={biteLayerToast.body}
-            visible={biteLayerToast.visible}
-          />
-        </div>
+        {/* Bite Layer Navigation Banner — only shown in "top" style mode */}
+        {biteNotifStyle === "top" && !isCopilotActive && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[70] pointer-events-none">
+            <BiteNavigationBanner
+              title={biteLayerToast.title}
+              body={biteLayerToast.body}
+              visible={biteLayerToast.visible}
+            />
+          </div>
+        )}
 
         {/* Undo variant switcher — draggable, toggle with 'E' key */}
         {isUndoPanelOpen && isSwitcherVisible && (
@@ -1158,7 +1171,36 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
           </motion.div>
         )}
 
-        
+        {/* Bite notification style switcher — hidden while Prep Copilot is open */}
+        {!isCopilotActive && (
+        <motion.div
+          drag
+          dragMomentum={false}
+          dragElastic={0}
+          className="absolute right-4 top-20 z-[60] flex flex-col items-start gap-1 bg-white/90 backdrop-blur-sm rounded-[16px] px-3 py-2 shadow-lg border border-black/8 cursor-grab active:cursor-grabbing"
+        >
+          <div className="w-8 h-1 rounded-full bg-black/15 mb-0.5 self-center" />
+          <span className="text-[10px] text-[#8a8a8a] font-medium">Bite alert:</span>
+          <div className="flex items-center gap-1">
+            {(["top", "under-tab"] as const).map(style => (
+              <button
+                key={style}
+                onPointerDown={e => e.stopPropagation()}
+                onClick={() => setBiteNotifStyle(style)}
+                className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors ${
+                  biteNotifStyle === style
+                    ? 'bg-[#009ACE] text-white'
+                    : 'text-[#3E3D40] hover:bg-gray-100'
+                }`}
+              >
+                {style === "top" ? "Top center" : "Under tab"}
+              </button>
+            ))}
+          </div>
+        </motion.div>
+        )}
+
+
         {/* Left side - JawSelector - stays in fixed position (hidden when Copilot active) */}
         <div
           className={`absolute left-4 flex flex-col items-start gap-8 z-50 transition-all duration-200 top-4 ${isCopilotActive ? 'hidden' : ''}`}
@@ -1466,9 +1508,15 @@ export default function ScanPageMultiLayer({ patient, onBack, onHome, onNavigate
           )}
         </div>
 
-        {/* Prep Copilot - full experience: 3D viewer + overlays + side panel */}
+        {/* Prep Copilot — Prep Reduction QC: mark the prep, then verify margin /
+            reduction / occlusal / interproximal / undercuts. z-40 sits BELOW the
+            scan toolbar (z-50) so the toolbar's Prep Copilot button stays clickable
+            and toggles the copilot open/closed. The copilot keeps its own controls
+            clear of the top-right corner where the toolbar floats. */}
         {isCopilotActive && (
-          <PrepCopilotExperience onClose={() => setIsCopilotActive(false)} toolbarCollapsed={isToolbarCollapsed} toothTreatments={toothTreatments} />
+          <div className="absolute inset-0 z-40">
+            <PrepQC onClose={() => setIsCopilotActive(false)} />
+          </div>
         )}
       </div>
 

@@ -39,8 +39,6 @@ const PREP_REDUCTION_COLORS = [
   { threshold: 2.5, color: [0.100, 0.100, 0.700] },
 ] as const;
 
-/** Min margin (mm) in XY: closest vs 2nd-closest tooth — below = interproximal gap */
-const GAP_MIN_MARGIN_MM = 0.85;
 
 type HeatmapMode = 'occlusgram' | 'prep-reduction';
 
@@ -126,7 +124,7 @@ const FRAGMENT_SHADER = `
   uniform float uOpacity;
   void main() {
     if (vHeatAlpha < 0.01) discard;
-    gl_FragColor = vec4(vHeatColor, vHeatAlpha * uOpacity);
+    gl_FragColor = vec4(vHeatColor, uOpacity);
   }
 `;
 
@@ -213,11 +211,6 @@ export default function ToothHeatmapOverlay({
         continue;
       }
 
-      if (secondMinDistXY - minDistXY < GAP_MIN_MARGIN_MM) {
-        heatAlphaArr[i] = 0;
-        continue;
-      }
-
       if (toothData[closestAda] === undefined) {
         heatAlphaArr[i] = 0;
         continue;
@@ -227,7 +220,7 @@ export default function ToothHeatmapOverlay({
       const dy = y - closestCenter.y;
       const distXY = Math.hypot(dx, dy);
 
-      const radialT = Math.min(1, distXY / 5.5);
+      const radialT = Math.min(1, distXY / 7.0);
       const angle = Math.atan2(dy, dx);
       const detail =
         Math.sin(angle * 3 + closestAda * 0.4) * 0.1 +
@@ -250,11 +243,13 @@ export default function ToothHeatmapOverlay({
       heatColorArr[i * 3] = rgb[0];
       heatColorArr[i * 3 + 1] = rgb[1];
       heatColorArr[i * 3 + 2] = rgb[2];
-      heatAlphaArr[i] = 0.97;
+      heatAlphaArr[i] = 1.0;
     }
 
     geo.setAttribute('heatColor', new THREE.BufferAttribute(heatColorArr, 3));
     geo.setAttribute('heatAlpha', new THREE.BufferAttribute(heatAlphaArr, 1));
+    const coloredCount = heatAlphaArr.filter(a => a > 0).length;
+    console.log('[ToothHeatmapOverlay]', mode, jawType, 'colored:', coloredCount, '/', count, 'active:', active);
     return geo;
   }, [rawGeometry, jawType, mode, toothData, useBothTeeth]);
 

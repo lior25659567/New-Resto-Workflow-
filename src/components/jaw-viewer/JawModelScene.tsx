@@ -6,6 +6,7 @@ import JawMesh from './JawMesh';
 import JawControls from './JawControls';
 import OcclusogramHeatmapOverlay from './OcclusogramHeatmapOverlay';
 import ToothHeatmapOverlay from './ToothHeatmapOverlay';
+import FullJawHeatmap from './FullJawHeatmap';
 import ToothMarkers from './ToothMarkers';
 import { jawModels } from './jawModelPaths';
 import hdrUrl from '@/assets/lebombo_1k.hdr?url';
@@ -40,7 +41,9 @@ interface JawModelSceneProps {
 
 const SCALE = 0.035;
 
-const UPPER_ROT: [number, number, number] = [Math.PI * 0.6, 0, Math.PI];
+// Upper arch flipped 180° (crowns down) to match the scan-guidance orientation.
+// Equivalent to rolling the old [0.6π, 0, π] 180° about the view axis.
+const UPPER_ROT: [number, number, number] = [-Math.PI * 0.6, 0, 0];
 const LOWER_ROT: [number, number, number] = [Math.PI * 0.6, Math.PI, Math.PI];
 
 export const DEFAULT_BOTH_UPPER_POS: [number, number, number] = [-0.35, -0.10, 0.75];
@@ -106,55 +109,13 @@ export default function JawModelScene({
 
   const [modelGroup, setModelGroup] = useState<THREE.Group | null>(null);
 
-  // Generate heatmap data based on active tool
   const getHeatmapMode = () => {
     if (isOcclusogramActive) return 'occlusgram';
     if (isPrepReductionActive) return 'prep-reduction';
     return 'none';
   };
 
-  const generateOcclusogramData = (jawType: 'upper' | 'lower') => {
-    const data: Record<number, number> = {};
-    const teeth = jawType === 'upper' ? 
-      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] : 
-      [17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 32];
-    
-    teeth.forEach(ada => {
-      // Per-tooth presence flag (0–1.2 scale applied in overlay per vertex)
-      data[ada] = 0.6 + Math.sin(ada * 0.5) * 0.1;
-    });
-    
-    return data;
-  };
-
-  const generatePrepReductionData = (jawType: 'upper' | 'lower') => {
-    const data: Record<number, number> = {};
-    const teeth = jawType === 'upper' ? 
-      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] : 
-      [17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 32];
-    
-    teeth.forEach(ada => {
-      // Simulate material reduction: varied by tooth position and type
-      const isPosterior = (ada >= 1 && ada <= 5) || (ada >= 12 && ada <= 15) || 
-                          (ada >= 17 && ada <= 21) || (ada >= 28 && ada <= 32);
-      const baseReduction = isPosterior ? 1.2 : 0.8; // More reduction needed on posterior teeth
-      const noise = (Math.sin(ada * 0.5 + 2.1) + Math.cos(ada * 0.3 + 1.8)) * 0.3;
-      data[ada] = Math.max(0.3, Math.min(2.2, baseReduction + noise));
-    });
-    
-    return data;
-  };
-
   const heatmapMode = getHeatmapMode();
-
-  const upperHeatmapData = heatmapMode === 'occlusgram' ?
-    generateOcclusogramData('upper') :
-    heatmapMode === 'prep-reduction' ?
-    generatePrepReductionData('upper') : {};
-  const lowerHeatmapData = heatmapMode === 'occlusgram' ?
-    generateOcclusogramData('lower') :
-    heatmapMode === 'prep-reduction' ?
-    generatePrepReductionData('lower') : {};
 
   // Which PLY to use for occlusogram heatmap overlay based on selected layer
   const occUpperUrl = occlusogramSelectedLayer === 'pre-treatment'
@@ -180,16 +141,12 @@ export default function JawModelScene({
           <JawMesh url={jawModels.both_arches} opacity={1} visible={isBoth} rotation={LOWER_ROT} scale={SCALE} monochrome={monochrome} />
           {/* Heatmap overlay for both-arches model */}
           {heatmapMode !== 'none' && isBoth && (
-            <ToothHeatmapOverlay
+            <FullJawHeatmap
               url={jawModels.both_arches}
-              jawType="bite"
               rotation={LOWER_ROT}
               scale={SCALE}
               active={true}
               mode={heatmapMode === 'occlusgram' ? 'occlusgram' : 'prep-reduction'}
-              toothData={{ ...upperHeatmapData, ...lowerHeatmapData }}
-              position={[0, 0, 0]}
-              useBothTeeth
             />
           )}
         </Suspense>
@@ -202,18 +159,15 @@ export default function JawModelScene({
             <OcclusogramHeatmapOverlay url={jawModels.upper_treatment} jawType="upper" rotation={UPPER_ROT} scale={SCALE} active={isOcclusogramActive && showUpper && !isBoth} />
             */}
           </Suspense>
-          {/* Per-tooth heatmap overlay for active tools (single-jaw view only) */}
+          {/* Full jaw heatmap overlay for active tools (single-jaw view only) */}
           {heatmapMode !== 'none' && showUpper && !isBoth && (
             <Suspense fallback={null}>
-              <ToothHeatmapOverlay
+              <FullJawHeatmap
                 url={heatmapMode === 'occlusgram' ? occUpperUrl : jawModels.upper_treatment}
-                jawType="lower"
                 rotation={UPPER_ROT}
                 scale={SCALE}
                 active={true}
                 mode={heatmapMode === 'occlusgram' ? 'occlusgram' : 'prep-reduction'}
-                toothData={lowerHeatmapData}
-                position={[0, 0, 0]}
               />
             </Suspense>
           )}
@@ -227,7 +181,7 @@ export default function JawModelScene({
                 jawType="lower" 
                 visible
                 heatmapMode={heatmapMode}
-                toothHeatmapData={lowerHeatmapData}
+                toothHeatmapData={{}}
               />
             </Suspense>
           )}
@@ -242,18 +196,15 @@ export default function JawModelScene({
             <OcclusogramHeatmapOverlay url={jawModels.lower_treatment} jawType="lower" rotation={LOWER_ROT} scale={SCALE} active={isOcclusogramActive && showLower && !isBoth} />
             */}
           </Suspense>
-          {/* Per-tooth heatmap overlay for active tools (single-jaw view only) */}
+          {/* Full jaw heatmap overlay for active tools (single-jaw view only) */}
           {heatmapMode !== 'none' && showLower && !isBoth && (
             <Suspense fallback={null}>
-              <ToothHeatmapOverlay
+              <FullJawHeatmap
                 url={heatmapMode === 'occlusgram' ? occLowerUrl : jawModels.lower_treatment}
-                jawType="upper"
                 rotation={LOWER_ROT}
                 scale={SCALE}
                 active={true}
                 mode={heatmapMode === 'occlusgram' ? 'occlusgram' : 'prep-reduction'}
-                toothData={upperHeatmapData}
-                position={[0, 0, 0]}
               />
             </Suspense>
           )}
@@ -267,7 +218,7 @@ export default function JawModelScene({
                 jawType="upper" 
                 visible
                 heatmapMode={heatmapMode}
-                toothHeatmapData={upperHeatmapData}
+                toothHeatmapData={{}}
               />
             </Suspense>
           )}

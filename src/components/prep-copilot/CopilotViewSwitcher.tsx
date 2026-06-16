@@ -11,11 +11,29 @@ const VIEWS: { id: ViewId; label: string; icon: React.ReactNode }[] = [
     ),
   },
   {
+    id: 'zones',
+    label: 'Occlusalogram',
+    icon: (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10"/><path d="M12 2v20"/><path d="M2 12h20"/>
+      </svg>
+    ),
+  },
+  {
     id: 'undercuts',
     label: 'Undercuts',
     icon: (
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 22V12"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/><path d="M12 2a10 10 0 0 1 10 10"/><path d="M12 2a10 10 0 0 0-10 10"/>
+      </svg>
+    ),
+  },
+  {
+    id: 'section',
+    label: 'Cross-Section',
+    icon: (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M2 12h20"/><path d="M12 2v20"/><path d="M4 4l16 16"/>
       </svg>
     ),
   },

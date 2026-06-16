@@ -5,9 +5,10 @@ import CopilotScene from './CopilotScene';
 
 interface CopilotModelViewerProps {
   children?: React.ReactNode;
+  disableRotate?: boolean;
 }
 
-export default function CopilotModelViewer({ children }: CopilotModelViewerProps) {
+export default function CopilotModelViewer({ children, disableRotate = false }: CopilotModelViewerProps) {
   return (
     <div className="relative w-full h-full min-h-0">
       <Canvas
@@ -19,11 +20,11 @@ export default function CopilotModelViewer({ children }: CopilotModelViewerProps
           toneMapping: THREE.ACESFilmicToneMapping,
           toneMappingExposure: 0.7,
         }}
-        style={{ width: '100%', height: '100%', background: '#d6e7f1', touchAction: 'none' }}
+        style={{ width: '100%', height: '100%', background: '#d6e7f1', touchAction: 'none', cursor: disableRotate ? 'crosshair' : 'grab' }}
         dpr={typeof window !== 'undefined' ? window.devicePixelRatio : 1}
       >
         <Suspense fallback={null}>
-          <CopilotScene>{children}</CopilotScene>
+          <CopilotScene disableRotate={disableRotate}>{children}</CopilotScene>
         </Suspense>
       </Canvas>
     </div>

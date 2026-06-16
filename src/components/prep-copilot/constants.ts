@@ -35,6 +35,7 @@ export const VIEW_CAMERA_PRESETS: Record<ViewId, CameraPreset> = {
   insertion: CAMERA_PRESETS.buccal,
   undercuts: { theta: -Math.PI / 3, phi: 1.85, radius: 3.2 },
   zones: CAMERA_PRESETS.occlusal,
+  section: { theta: Math.PI / 4, phi: 1.9, radius: 3.5 },
   crown: { theta: 0.2, phi: 2.1, radius: 3.0 },
 };
 
@@ -45,6 +46,7 @@ export const ANALYSIS_DURATIONS: Record<ViewId, number> = {
   insertion: 1500,
   undercuts: 1500,
   zones: 1000,
+  section: 1200,
   crown: 2500,
 };
 
@@ -98,6 +100,14 @@ export function getFindings(material: MaterialType): Record<ViewId, ViewFinding>
       statusLabel: 'Select a zone',
       recommendation: 'Click a zone to inspect',
     },
+    section: {
+      title: 'Cross-Section',
+      area: 'Buccolingual',
+      measurement: '5 sample points',
+      status: 'pass',
+      statusLabel: 'Ready',
+      recommendation: 'Drag plane to inspect profiles',
+    },
     crown: {
       title: 'Crown Preview',
       area: 'Full prep',
@@ -144,15 +154,15 @@ export const MARGIN_LINE_POINTS: [number, number, number][] = [
 ];
 
 export const HEATMAP_COLORS = [
-  { threshold: 0.3, color: [0.85, 0.1, 0.1] },
-  { threshold: 0.5, color: [1.0, 0.3, 0.1] },
-  { threshold: 0.7, color: [1.0, 0.55, 0.1] },
-  { threshold: 0.9, color: [1.0, 0.8, 0.0] },
-  { threshold: 1.1, color: [0.7, 0.9, 0.0] },
-  { threshold: 1.3, color: [0.2, 0.85, 0.2] },
-  { threshold: 1.6, color: [0.1, 0.7, 0.6] },
-  { threshold: 2.0, color: [0.1, 0.5, 0.9] },
-  { threshold: 2.5, color: [0.2, 0.2, 0.8] },
+  { threshold: 0.0, color: [0.48, 0.04, 0.10] },
+  { threshold: 0.2, color: [0.84, 0.16, 0.12] },
+  { threshold: 0.4, color: [0.91, 0.50, 0.12] },
+  { threshold: 0.6, color: [0.84, 0.81, 0.12] },
+  { threshold: 0.8, color: [0.25, 0.79, 0.30] },
+  { threshold: 1.0, color: [0.12, 0.75, 0.56] },
+  { threshold: 1.2, color: [0.12, 0.53, 0.84] },
+  { threshold: 1.5, color: [0.12, 0.23, 0.62] },
+  { threshold: 2.0, color: [0.10, 0.10, 0.43] },
 ] as const;
 
 export const INSERTION_ARROW = {

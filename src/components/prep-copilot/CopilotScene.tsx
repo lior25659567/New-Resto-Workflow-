@@ -23,9 +23,10 @@ export function useModelContext() {
 
 interface CopilotSceneProps {
   children?: React.ReactNode;
+  disableRotate?: boolean;
 }
 
-export default function CopilotScene({ children }: CopilotSceneProps) {
+export default function CopilotScene({ children, disableRotate = false }: CopilotSceneProps) {
   const controlsRef = useRef<any>(null);
   useFrame(() => { controlsRef.current?.update(); });
 
@@ -45,7 +46,7 @@ export default function CopilotScene({ children }: CopilotSceneProps) {
         makeDefault
         enablePan
         enableZoom
-        enableRotate
+        enableRotate={!disableRotate}
         enableDamping
         dampingFactor={0.08}
         rotateSpeed={1.5}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import CopilotModelViewer from './CopilotModelViewer';
 import PrepCopilotPanel from './PrepCopilotPanel';
@@ -7,31 +7,50 @@ import type { ViewId, ZoneId } from './types';
 import { detectCaseFromTreatments, PANEL_WIDTH } from './constants';
 
 import MeasuredReductionHeatmap from './overlays/MeasuredReductionHeatmap';
+import ReductionHeatmap from './overlays/ReductionHeatmap';
+import ZoneOverlay from './overlays/ZoneOverlay';
+import HeatmapLegend from './overlays/HeatmapLegend';
+import CrossSectionOverlay from './overlays/CrossSectionOverlay';
+import { ModelContext } from './CopilotScene';
 import CopilotProgressStrip from './CopilotProgressStrip';
 import { PlyUploadDropzone } from './PlyUploadDropzone';
 import { PrepAreaBrushPanel } from './brush/PrepAreaBrushPanel';
+import { DefaultModelBrush } from './brush/DefaultModelBrush';
 import { usePlyUpload } from './usePlyUpload';
 import { icpAlign } from './icp/icpAlign';
 import { PrepModelsContext } from './usePrepModels';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useJawGeo } from '../jaw-viewer/jawPLYLoader';
+
+import prepPretreatmentUrl from '@/assets/Prep copilot 3d models/upper_jaw_pretreatment_261974141.ply?url';
+import prepWithDitchUrl from '@/assets/Prep copilot 3d models/upper_jaw_with_ditch_261974141.ply?url';
 
 // Canonical model settings from skill: 3d model movement
 const USER_MODEL_SCALE = 0.035;
 const USER_MODEL_ROTATION: [number, number, number] = [Math.PI * 0.6, 0, Math.PI];
+
+// Default positions for the prep copilot models — adjust and copy via the position controls
+const DEFAULT_PRETREATMENT_POS: [number, number, number] = [0, 0, 0];
+const DEFAULT_DITCH_POS: [number, number, number] = [0, 0, 0];
+
+const GUM_SHEEN = new THREE.Color(0xffeee6);
 
 function UserPostTreatmentMesh({ geometry }: { geometry: THREE.BufferGeometry }) {
   return (
     <mesh geometry={geometry} scale={USER_MODEL_SCALE} rotation={USER_MODEL_ROTATION}>
       <meshPhysicalMaterial
         vertexColors
-        roughness={0.4}
+        roughness={0.2}
         metalness={0.0}
         side={THREE.DoubleSide}
-        clearcoat={0.15}
-        clearcoatRoughness={0.4}
-        reflectivity={0.3}
-        envMapIntensity={0.5}
-        ior={1.3}
+        clearcoat={0.5}
+        clearcoatRoughness={0.12}
+        reflectivity={0.45}
+        envMapIntensity={1.0}
+        ior={1.52}
+        sheen={0.28}
+        sheenRoughness={0.65}
+        sheenColor={GUM_SHEEN}
       />
     </mesh>
   );
@@ -55,6 +74,105 @@ function GhostPretreatmentMesh({ geometry, alignmentMatrix }: { geometry: THREE.
         roughness={0.6}
       />
     </mesh>
+  );
+}
+
+const STONE_COLOR = new THREE.Color(0xe8e4dc);
+const STONE_SHEEN = new THREE.Color(0xf2f0ec);
+
+interface DefaultModelMeshProps {
+  url: string;
+  position: [number, number, number];
+  meshRef?: React.Ref<THREE.Mesh>;
+  onPointerDown?: (e: any) => void;
+  onPointerUp?: (e: any) => void;
+}
+
+function DefaultModelMesh({ url, position, meshRef, onPointerDown, onPointerUp }: DefaultModelMeshProps) {
+  const geometry = useJawGeo(url, '');
+  return (
+    <mesh
+      ref={meshRef}
+      geometry={geometry}
+      scale={USER_MODEL_SCALE}
+      rotation={USER_MODEL_ROTATION}
+      position={position}
+      onPointerDown={onPointerDown}
+      onPointerUp={onPointerUp}
+    >
+      <meshPhysicalMaterial
+        color={STONE_COLOR}
+        roughness={0.65}
+        metalness={0.0}
+        side={THREE.DoubleSide}
+        clearcoat={0.08}
+        clearcoatRoughness={0.7}
+        reflectivity={0.2}
+        envMapIntensity={0.4}
+        ior={1.4}
+        sheen={0.2}
+        sheenRoughness={0.8}
+        sheenColor={STONE_SHEEN}
+      />
+    </mesh>
+  );
+}
+
+function PositionAdjustPanel({
+  pretreatmentPos,
+  ditchPos,
+  onNudge,
+  onCopy,
+  visible,
+  onToggle,
+}: {
+  pretreatmentPos: [number, number, number];
+  ditchPos: [number, number, number];
+  onNudge: (model: 'pretreatment' | 'ditch', dx: number, dy: number, dz: number) => void;
+  onCopy: () => void;
+  visible: boolean;
+  onToggle: () => void;
+}) {
+  const step = 0.05;
+  const fmt = (v: number) => v.toFixed(2);
+
+  if (!visible) {
+    return (
+      <button
+        onClick={onToggle}
+        className="absolute top-2 left-2 z-[60] rounded bg-slate-800/80 px-2 py-1 text-[10px] font-medium text-white/70 hover:bg-slate-700/90"
+      >
+        Adjust Positions
+      </button>
+    );
+  }
+
+  const ModelControls = ({ label, pos, model }: { label: string; pos: [number, number, number]; model: 'pretreatment' | 'ditch' }) => (
+    <div className="flex flex-col gap-1">
+      <span className="text-[10px] font-semibold text-white/80">{label} [{fmt(pos[0])}, {fmt(pos[1])}, {fmt(pos[2])}]</span>
+      <div className="flex flex-wrap gap-1">
+        <button className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] hover:bg-slate-200" onClick={() => onNudge(model, -step, 0, 0)}>X−</button>
+        <button className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] hover:bg-slate-200" onClick={() => onNudge(model, step, 0, 0)}>X+</button>
+        <button className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] hover:bg-slate-200" onClick={() => onNudge(model, 0, -step, 0)}>Y−</button>
+        <button className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] hover:bg-slate-200" onClick={() => onNudge(model, 0, step, 0)}>Y+</button>
+        <button className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] hover:bg-slate-200" onClick={() => onNudge(model, 0, 0, -step)}>Z−</button>
+        <button className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] hover:bg-slate-200" onClick={() => onNudge(model, 0, 0, step)}>Z+</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="absolute top-2 left-2 z-[60] flex flex-col gap-2 rounded-lg bg-slate-900/90 p-3 backdrop-blur-sm" style={{ maxWidth: 260 }}>
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-bold text-white/90">Model Positions</span>
+        <button onClick={onToggle} className="text-[10px] text-white/50 hover:text-white/80">Close</button>
+      </div>
+      <ModelControls label="Pretreatment" pos={pretreatmentPos} model="pretreatment" />
+      <ModelControls label="With Ditch" pos={ditchPos} model="ditch" />
+      <button onClick={onCopy} className="rounded bg-[#009ACE] px-2 py-1 text-[10px] font-semibold text-white hover:bg-[#0088b8]">
+        Copy Values
+      </button>
+    </div>
   );
 }
 
@@ -96,6 +214,31 @@ export default function PrepCopilotExperience({ onClose, toolbarCollapsed = true
   const [brushSize, setBrushSize] = useState<'S' | 'M' | 'L'>('M');
   const [eraseMode, setEraseMode] = useState(false);
   const [paintedCount, setPaintedCount] = useState(0);
+  const [brushEnabled, setBrushEnabled] = useState(false);
+  const [heatmapKey, setHeatmapKey] = useState(0);
+  const ditchMeshRef = useRef<THREE.Mesh>(null);
+  const pretreatmentMeshRef = useRef<THREE.Mesh>(null);
+
+  const handleBrushMaskUpdate = useCallback((mask: Uint8Array, count: number) => {
+    setBrushMask(mask);
+    setPaintedCount(count);
+    setBrushedCount(count);
+  }, [setBrushedCount]);
+
+  // Default model position state
+  const [pretreatmentPos, setPretreatmentPos] = useState<[number, number, number]>([...DEFAULT_PRETREATMENT_POS]);
+  const [ditchPos, setDitchPos] = useState<[number, number, number]>([...DEFAULT_DITCH_POS]);
+  const [showPosControls, setShowPosControls] = useState(false);
+
+  const nudgeModel = useCallback((model: 'pretreatment' | 'ditch', dx: number, dy: number, dz: number) => {
+    const setter = model === 'pretreatment' ? setPretreatmentPos : setDitchPos;
+    setter(([x, y, z]) => [x + dx, y + dy, z + dz]);
+  }, []);
+
+  const copyPositionValues = useCallback(() => {
+    const text = `Pretreatment: [${pretreatmentPos.map(v => v.toFixed(2)).join(', ')}]\nWith Ditch: [${ditchPos.map(v => v.toFixed(2)).join(', ')}]`;
+    navigator.clipboard.writeText(text).catch(() => {});
+  }, [pretreatmentPos, ditchPos]);
 
   // Reset banner each time the user enters the undercuts view
   useEffect(() => {
@@ -145,7 +288,30 @@ export default function PrepCopilotExperience({ onClose, toolbarCollapsed = true
   }, [setBrushedCount]);
 
   const { activeView, phase } = state;
-  const showMeasuredHeatmap = activeView === 'reduction' && state.hasUserModels && !!alignmentMatrix && !!brushMask;
+  const hasDefaultModelsForHeatmap = !!ditchMeshRef.current?.geometry && !!pretreatmentMeshRef.current?.geometry && !!brushMask && paintedCount > 0;
+  const showMeasuredHeatmap = (
+    (state.hasUserModels && !!alignmentMatrix && !!brushMask) || hasDefaultModelsForHeatmap
+  );
+  const showProceduralHeatmap = activeView === 'reduction' && state.hasUserModels && !showMeasuredHeatmap;
+  const showZoneOverlay = activeView === 'zones' && state.hasUserModels;
+  const showCrossSection = activeView === 'section';
+
+  const modelContextValue = useMemo(() => {
+    if (!upload.post.geometry) return null;
+    const geo = upload.post.geometry;
+    const pos = geo.attributes.position;
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+      if (x < minX) minX = x; if (x > maxX) maxX = x;
+      if (y < minY) minY = y; if (y > maxY) maxY = y;
+      if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
+    }
+    return {
+      bounds: { minX, maxX, minY, maxY, minZ, maxZ, centerX: (minX + maxX) / 2, centerY: (minY + maxY) / 2, centerZ: (minZ + maxZ) / 2 },
+      geometry: geo,
+    };
+  }, [upload.post.geometry]);
 
   const isUploadPhase = phase === 'uploading';
   const isBrushPhase = phase === 'brushing';
@@ -165,36 +331,110 @@ export default function PrepCopilotExperience({ onClose, toolbarCollapsed = true
     <PrepModelsContext.Provider value={prepModelsValue}>
       <div className="absolute inset-0 z-[15]">
         <div className="absolute inset-0" style={{ pointerEvents: 'auto' }}>
-          <CopilotModelViewer>
-            {/* User's post-treatment model */}
-            {state.hasUserModels && upload.post.geometry && (
-              <UserPostTreatmentMesh geometry={upload.post.geometry} />
-            )}
-
-            {/* Pre-treatment model aligned on top of post-treatment */}
-            {alignmentMatrix && upload.pre.geometry && phase !== 'uploading' && (
-              <GhostPretreatmentMesh geometry={upload.pre.geometry} alignmentMatrix={alignmentMatrix} />
-            )}
-
-            {/* Real measured reduction heatmap */}
-            {showMeasuredHeatmap && upload.post.geometry && upload.pre.geometry && alignmentMatrix && brushMask && (
-              <MeasuredReductionHeatmap
-                postGeometry={upload.post.geometry}
-                preGeometry={upload.pre.geometry}
-                alignmentMatrix={alignmentMatrix}
-                brushMask={brushMask}
-                visible={true}
-                scale={USER_MODEL_SCALE}
-                rotation={USER_MODEL_ROTATION}
+          <CopilotModelViewer disableRotate={brushEnabled}>
+            <ModelContext.Provider value={modelContextValue}>
+              {/* Default prep copilot models — always visible */}
+              <DefaultModelMesh url={prepPretreatmentUrl} position={pretreatmentPos} meshRef={pretreatmentMeshRef} />
+              <DefaultModelMesh
+                url={prepWithDitchUrl}
+                position={ditchPos}
+                meshRef={ditchMeshRef}
               />
-            )}
+
+
+              {/* User's post-treatment model */}
+              {state.hasUserModels && upload.post.geometry && (
+                <UserPostTreatmentMesh geometry={upload.post.geometry} />
+              )}
+
+              {/* Pre-treatment model aligned on top of post-treatment */}
+              {alignmentMatrix && upload.pre.geometry && phase !== 'uploading' && (
+                <GhostPretreatmentMesh geometry={upload.pre.geometry} alignmentMatrix={alignmentMatrix} />
+              )}
+
+              {/* Procedural reduction heatmap (before brush/measured analysis) */}
+              {showProceduralHeatmap && (
+                <ReductionHeatmap visible={true} scale={USER_MODEL_SCALE} rotation={USER_MODEL_ROTATION} />
+              )}
+
+              {/* Zone overlay (occlusalogram) */}
+              {showZoneOverlay && (
+                <ZoneOverlay
+                  visible={true}
+                  selectedZone={state.selectedZone ?? null}
+                  onZoneClick={(zone) => setSelectedZone(zone)}
+                  scale={USER_MODEL_SCALE}
+                  rotation={USER_MODEL_ROTATION}
+                />
+              )}
+
+              {/* Cross-section plane */}
+              {showCrossSection && (
+                <CrossSectionOverlay
+                  visible={true}
+                  planeNormal={[1, 0, 0]}
+                  planeOffset={0}
+                  scale={USER_MODEL_SCALE}
+                  rotation={USER_MODEL_ROTATION}
+                />
+              )}
+
+              {/* Real measured reduction heatmap — from uploaded models */}
+              {showMeasuredHeatmap && upload.post.geometry && upload.pre.geometry && alignmentMatrix && brushMask && (
+                <MeasuredReductionHeatmap
+                  postGeometry={upload.post.geometry}
+                  preGeometry={upload.pre.geometry}
+                  alignmentMatrix={alignmentMatrix}
+                  brushMask={brushMask}
+                  visible={true}
+                  scale={USER_MODEL_SCALE}
+                  rotation={USER_MODEL_ROTATION}
+                />
+              )}
+
+              {/* Measured reduction heatmap — from default models + brush */}
+              {showMeasuredHeatmap && hasDefaultModelsForHeatmap && !upload.post.geometry && (
+                <MeasuredReductionHeatmap
+                  postGeometry={ditchMeshRef.current!.geometry}
+                  preGeometry={pretreatmentMeshRef.current!.geometry}
+                  alignmentMatrix={new THREE.Matrix4()}
+                  brushMask={brushMask!}
+                  visible={true}
+                  scale={USER_MODEL_SCALE}
+                  rotation={USER_MODEL_ROTATION}
+                  recomputeKey={heatmapKey}
+                />
+              )}
+
+              {/* Brush for painting prep area on default model */}
+              <DefaultModelBrush
+                meshRef={ditchMeshRef}
+                enabled={brushEnabled}
+                brushSize={brushSize}
+                eraseMode={eraseMode}
+                onMaskUpdate={handleBrushMaskUpdate}
+                onStrokeEnd={() => setHeatmapKey(k => k + 1)}
+              />
+            </ModelContext.Provider>
           </CopilotModelViewer>
+
+          <PositionAdjustPanel
+            pretreatmentPos={pretreatmentPos}
+            ditchPos={ditchPos}
+            onNudge={nudgeModel}
+            onCopy={copyPositionValues}
+            visible={showPosControls}
+            onToggle={() => setShowPosControls(v => !v)}
+          />
 
           <CopilotProgressStrip
             phase={phase}
             progress={state.overallProgress}
             statusText={statusText}
           />
+
+          {/* Heatmap legend for reduction view */}
+          <HeatmapLegend visible={activeView === 'reduction' && state.hasUserModels} />
         </div>
 
         {/* Undercut banner */}
@@ -316,6 +556,14 @@ export default function PrepCopilotExperience({ onClose, toolbarCollapsed = true
               onResetInsertionPath={resetInsertionPath}
               onToggleBridgeMode={toggleBridgeMode}
               toolbarCollapsed={toolbarCollapsed}
+              brushEnabled={brushEnabled}
+              onBrushToggle={() => setBrushEnabled(v => !v)}
+              brushSize={brushSize}
+              onBrushSizeChange={setBrushSize}
+              eraseMode={eraseMode}
+              onEraseModeChange={setEraseMode}
+              paintedCount={paintedCount}
+              onBrushClear={handleBrushClear}
             />
           )}
         </AnimatePresence>

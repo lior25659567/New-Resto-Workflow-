@@ -1,4 +1,4 @@
-export type ViewId = 'margin' | 'reduction' | 'insertion' | 'undercuts' | 'zones' | 'crown';
+export type ViewId = 'margin' | 'reduction' | 'insertion' | 'undercuts' | 'zones' | 'section' | 'crown';
 
 export type MaterialType =
   | 'bruxzir-esthetic'

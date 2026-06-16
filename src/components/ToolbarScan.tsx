@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import CollapseButton from "../imports/CollapseButton";
 import IconsMonochrome from "../imports/IconsMonochrome";
@@ -30,6 +30,8 @@ interface ToolbarScanProps {
   /** Which UI variant to use: 1=Bordered, 2=Borderless, 3=Compact, 4=Labeled, 5=Pill, 6=Icons, 7=Stacked, 8=H-Stack */
   undoVariant?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
   hideCopilot?: boolean;
+  /** Parent-owned copilot state — keeps the button highlight in sync when the copilot closes itself. */
+  copilotActive?: boolean;
 }
 
 export function ToolbarScan({
@@ -43,12 +45,23 @@ export function ToolbarScan({
   onUndo,
   undoVariant = 1,
   hideCopilot = false,
+  copilotActive,
 }: ToolbarScanProps = {}) {
   const [selectedTool, setSelectedTool] = useState<number | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [isPrepEditPanelOpen, setIsPrepEditPanelOpen] = useState(false);
   const [isCopilotActive, setIsCopilotActive] = useState(false);
   const [isUndoPanelOpen, setIsUndoPanelOpen] = useState(false);
+
+  // Sync the button highlight when the copilot is closed from inside the
+  // experience (its own X button) rather than by re-clicking the toolbar.
+  useEffect(() => {
+    if (copilotActive === false && isCopilotActive) {
+      setIsCopilotActive(false);
+      setSelectedTool(null);
+      onAnyToolActiveChange?.(false);
+    }
+  }, [copilotActive]);
 
   // Option 3 toast state
   const toast = useUndoToast();

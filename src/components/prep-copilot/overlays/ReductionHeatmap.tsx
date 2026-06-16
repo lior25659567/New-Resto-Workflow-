@@ -7,6 +7,8 @@ import { HEATMAP_COLORS } from '../constants';
 interface ReductionHeatmapProps {
   visible: boolean;
   isRescan?: boolean;
+  scale?: number;
+  rotation?: [number, number, number];
 }
 
 function getHeatmapColor(val: number): [number, number, number] {
@@ -25,11 +27,8 @@ function getHeatmapColor(val: number): [number, number, number] {
   return [...last.color] as [number, number, number];
 }
 
-// Prep tooth focus area — centered on lower first molar region
-const PREP_TOOTH_CENTER: [number, number, number] = [-0.8, -0.2, -0.3];
-const PREP_FOCUS_RADIUS = 0.45;
 
-export default function ReductionHeatmap({ visible, isRescan }: ReductionHeatmapProps) {
+export default function ReductionHeatmap({ visible, isRescan, scale: scaleProp, rotation: rotationProp }: ReductionHeatmapProps) {
   const ctx = useModelContext();
   const startTimeRef = useRef<number | null>(null);
 
@@ -44,6 +43,11 @@ export default function ReductionHeatmap({ visible, isRescan }: ReductionHeatmap
 
     const base = new Float32Array(n * 3);
     const targets = new Float32Array(n * 3);
+
+    // Use geometry center as focus, with radius covering most of the model
+    const prepCenter: [number, number, number] = [bounds.centerX, bounds.centerY, bounds.centerZ];
+    const modelExtent = Math.max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY, bounds.maxZ - bounds.minZ);
+    const focusRadius = modelExtent * 0.6;
 
     // Preserve original vertex colors if they exist
     const origColors = geo.attributes.color;
@@ -63,20 +67,20 @@ export default function ReductionHeatmap({ visible, isRescan }: ReductionHeatmap
       base[i * 3 + 2] = origB;
 
       const distFromPrep = Math.sqrt(
-        (x - PREP_TOOTH_CENTER[0]) ** 2 +
-        (y - PREP_TOOTH_CENTER[1]) ** 2 +
-        (z - PREP_TOOTH_CENTER[2]) ** 2
+        (x - prepCenter[0]) ** 2 +
+        (y - prepCenter[1]) ** 2 +
+        (z - prepCenter[2]) ** 2
       );
 
       // Smooth falloff from focus center
       let focusMask: number;
-      const innerR = PREP_FOCUS_RADIUS * 0.65;
-      const outerR = PREP_FOCUS_RADIUS;
+      const innerR = focusRadius * 0.65;
+      const outerR = focusRadius;
       if (distFromPrep < innerR) {
         focusMask = 1.0;
       } else if (distFromPrep < outerR) {
         focusMask = 1 - (distFromPrep - innerR) / (outerR - innerR);
-        focusMask = focusMask * focusMask; // quadratic fade
+        focusMask = focusMask * focusMask;
       } else {
         focusMask = 0.0;
       }
@@ -94,15 +98,13 @@ export default function ReductionHeatmap({ visible, isRescan }: ReductionHeatmap
         Math.cos(y * 0.2 + x * 0.07) * 0.08 +
         Math.sin(z * 0.13 + y * 0.17) * 0.06;
 
-      const yNorm = (y - bounds.minY) / (bounds.maxY - bounds.minY);
+      const yNorm = (y - bounds.minY) / (bounds.maxY - bounds.minY || 1);
 
       let reduction: number;
       if (isRescan) {
-        // Post-adjustment: mostly adequate/good reduction
         reduction = 1.15 + Math.max(0, normalY) * 0.45 + yNorm * 0.25 + noise * 0.1;
       } else {
         reduction = 0.5 + Math.max(0, normalY) * 0.85 + yNorm * 0.45 + noise * 0.28;
-        // Hot spots: clinically insufficient areas
         const angle = Math.atan2(z - bounds.centerZ, x - bounds.centerX);
         reduction -= Math.exp(-((angle - 2.8) ** 2) * 2.5) * 0.35;
         reduction -= Math.exp(-((angle + 0.5) ** 2) * 3.5) * 0.25;
@@ -150,8 +152,10 @@ export default function ReductionHeatmap({ visible, isRescan }: ReductionHeatmap
 
   if (!heatmapGeo) return null;
 
+  const meshScale = scaleProp ?? 0.055;
+
   return (
-    <mesh geometry={heatmapGeo} scale={0.055}>
+    <mesh geometry={heatmapGeo} scale={meshScale} rotation={rotationProp}>
       <meshBasicMaterial
         vertexColors
         depthWrite={false}

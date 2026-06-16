@@ -138,24 +138,38 @@ function SimplifiedLayerItem({ label, icon }: { label: string; icon: 'upper' | '
   );
 }
 
-// Trim layer item - clickable row with active state
-function TrimLayerItem({ label, isActive, onClick }: { label: string; isActive: boolean; onClick: () => void }) {
+// Trim layer item - clickable card matching prep reduction layout (no sliders/eye)
+function TrimLayerItem({ label, isActive, onClick, currentView, hasUpper = true, hasLower = true }: { label: string; isActive: boolean; onClick: () => void; currentView: 0 | 1 | 2; hasUpper?: boolean; hasLower?: boolean }) {
+  const showUpper = (currentView === 0 || currentView === 2) && hasUpper;
+  const showLower = (currentView === 1 || currentView === 2) && hasLower;
   return (
     <button
       onClick={onClick}
-      className={`flex gap-[16px] items-center p-[8px] rounded-[8px] w-full relative transition-colors ${
+      className={`w-full relative transition-colors text-left rounded-[8px] p-[8px] ${
         isActive ? 'bg-[#dff5fc]' : 'bg-white hover:bg-gray-50'
       }`}
     >
       {isActive && (
         <div className="absolute border-2 border-[#00adef] border-solid inset-[-1px] pointer-events-none rounded-[9px]" />
       )}
-      <div className="shrink-0 w-[24px] h-[24px]">
-        <CoordinateFullArch />
+      <div className="space-y-3">
+        {showUpper && (
+          <div className="flex items-center gap-4">
+            <div className="w-8 h-8 text-gray-400 flex-shrink-0 flex items-center justify-center">
+              <div className="w-8 h-8"><CoordinateFullArch /></div>
+            </div>
+            <p className="font-['Roboto',sans-serif] text-[18px] leading-[28px] text-[#3e3d40]" style={{ fontWeight: 400 }}>{label}</p>
+          </div>
+        )}
+        {showLower && (
+          <div className="flex items-center gap-4">
+            <div className="w-8 h-8 text-gray-400 flex-shrink-0 flex items-center justify-center">
+              <div className="w-8 h-8 rotate-180"><CoordinateFullArch /></div>
+            </div>
+            <p className="font-['Roboto',sans-serif] text-[18px] leading-[28px] text-[#3e3d40]" style={{ fontWeight: 400 }}>{label}</p>
+          </div>
+        )}
       </div>
-      <p className="font-['Roboto',sans-serif] text-[18px] leading-[28px] text-[#3e3d40] text-left" style={{ fontWeight: 400 }}>
-        {label}
-      </p>
     </button>
   );
 }
@@ -548,6 +562,9 @@ export function MultiLayerOption2({ onViewChange, onSliderChange, onLayerStatesC
                   <TrimLayerItem
                     label="Pre-treatment"
                     isActive={selectedTrimLayer === 'pre-treatment'}
+                    currentView={currentView as 0 | 1 | 2}
+                    hasUpper={pretreatmentHasUpper}
+                    hasLower={pretreatmentHasLower}
                     onClick={() => {
                       setSelectedTrimLayer('pre-treatment');
                       if (onTrimLayerChange) onTrimLayerChange('pre-treatment');
@@ -558,6 +575,9 @@ export function MultiLayerOption2({ onViewChange, onSliderChange, onLayerStatesC
                   <TrimLayerItem
                     label="Treatment scan"
                     isActive={selectedTrimLayer === 'treatment'}
+                    currentView={currentView as 0 | 1 | 2}
+                    hasUpper={treatmentHasUpper}
+                    hasLower={treatmentHasLower}
                     onClick={() => {
                       setSelectedTrimLayer('treatment');
                       if (onTrimLayerChange) onTrimLayerChange('treatment');
@@ -572,6 +592,9 @@ export function MultiLayerOption2({ onViewChange, onSliderChange, onLayerStatesC
                   <TrimLayerItem
                     label="Pre-treatment"
                     isActive={selectedOcclusogramLayer === 'pre-treatment'}
+                    currentView={currentView as 0 | 1 | 2}
+                    hasUpper={pretreatmentHasUpper}
+                    hasLower={pretreatmentHasLower}
                     onClick={() => {
                       setSelectedOcclusogramLayer('pre-treatment');
                       if (onOcclusogramLayerChange) onOcclusogramLayerChange('pre-treatment');
@@ -582,6 +605,9 @@ export function MultiLayerOption2({ onViewChange, onSliderChange, onLayerStatesC
                   <TrimLayerItem
                     label="Treatment scan"
                     isActive={selectedOcclusogramLayer === 'treatment'}
+                    currentView={currentView as 0 | 1 | 2}
+                    hasUpper={treatmentHasUpper}
+                    hasLower={treatmentHasLower}
                     onClick={() => {
                       setSelectedOcclusogramLayer('treatment');
                       if (onOcclusogramLayerChange) onOcclusogramLayerChange('treatment');
@@ -592,6 +618,9 @@ export function MultiLayerOption2({ onViewChange, onSliderChange, onLayerStatesC
                   <TrimLayerItem
                     label="Additional scan"
                     isActive={selectedOcclusogramLayer === 'additional'}
+                    currentView={currentView as 0 | 1 | 2}
+                    hasUpper={additionalHasUpper}
+                    hasLower={additionalHasLower}
                     onClick={() => {
                       setSelectedOcclusogramLayer('additional');
                       if (onOcclusogramLayerChange) onOcclusogramLayerChange('additional');

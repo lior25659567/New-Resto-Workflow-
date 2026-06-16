@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import type { ViewId, MaterialType, CopilotPhase, AnalysisStatus, ZoneId, PrepCopilotState, CaseType, InsertionPathAngles } from './types';
 import { ANALYSIS_DURATIONS, PHASE_DURATIONS, getFindings, getZoneReductions, OPTIMAL_INSERTION_PATH, computeUndercutSeverities } from './constants';
 
-const VIEW_ORDER: ViewId[] = ['reduction', 'undercuts'];
+const VIEW_ORDER: ViewId[] = ['reduction', 'zones', 'undercuts', 'section'];
 
 const INITIAL_ANALYSIS: Record<ViewId, AnalysisStatus> = {
   margin: 'pending',
@@ -10,6 +10,7 @@ const INITIAL_ANALYSIS: Record<ViewId, AnalysisStatus> = {
   insertion: 'pending',
   undercuts: 'pending',
   zones: 'pending',
+  section: 'pending',
   crown: 'pending',
 };
 
@@ -133,9 +134,11 @@ export function usePrepCopilotStateMachine(isActive: boolean, options?: StateMac
       return;
     }
 
-    // Start with upload phase
-    setPhase('uploading');
-    setStatusText('Upload scan models');
+    // Skip upload — default models are loaded automatically
+    setHasUserModels(true);
+    setPhase('analyzing');
+    setStatusText('Analyzing prep...');
+    startAnalysis();
 
     return clearTimers;
   }, [isActive, clearTimers]);

@@ -122,6 +122,8 @@ export default function App() {
           break;
 
         case 's':
+          // In scan guidance, S is the scan/brush trigger — don't hijack it for navigation.
+          if (currentView === 'scanGuidance') break;
           // Quick test: jump to scan page with demo patient and crown workflow
           setCurrentView('flow');
           setFlowStep('scanMultiLayer');

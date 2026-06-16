@@ -52,9 +52,9 @@ export const UPPER_TEETH: ToothCentroid[] = [
   { ada: 15, label: '#15', x: -31.410, y:   6.440, z:  8.400 },
 ];
 
-export const GUM_PINKNESS_THRESHOLD = 0.28;
+export const GUM_PINKNESS_THRESHOLD = 0.38;
 /** Min luminance for white enamel (matches scripts/analyze_itero_teeth.py) */
-export const ENAMEL_LUMINANCE_MIN = 0.4;
+export const ENAMEL_LUMINANCE_MIN = 0.30;
 
 export type JawKind = 'upper' | 'lower' | 'bite';
 
@@ -97,26 +97,24 @@ export function isToothSurfaceVertex(
   const distXY = Math.hypot(dx, dy);
 
   if (jawType === 'lower') {
-    // Lower.ply (viewer jawType="lower"): occlusal faces up
-    if (normalZ < 0.15) return false;
-    if (distXY > 6.0) return false;
-    if (dz < -2.2) return false;
+    if (normalZ < -0.3) return false;
+    if (distXY > 7.5) return false;
+    if (dz < -3.5) return false;
     return true;
   }
 
   if (jawType === 'upper') {
-    // Upper.ply: same frame as Lower.ply — high Z = occlusal, nz > 0 on crown
-    if (normalZ < 0.15) return false;
-    if (distXY > 6.0) return false;
-    if (dz < -2.2) return false;
+    if (normalZ < -0.3) return false;
+    if (distXY > 7.5) return false;
+    if (dz < -3.5) return false;
     return true;
   }
 
   // bite / both
   const absNZ = Math.abs(normalZ);
-  if (absNZ < 0.12) return false;
-  if (distXY > 6.0) return false;
-  return Math.abs(dz) < 2.5;
+  if (absNZ < 0.05) return false;
+  if (distXY > 7.5) return false;
+  return Math.abs(dz) < 4.0;
 }
 
 const MAX_REFINE_DRIFT_MM = 2.0;
@@ -149,12 +147,12 @@ export function refineToothCentroidsFromGeometry(
       const z = pos.getZ(i);
       const nz = normals ? normals.getZ(i) : 0;
       const center = { x: sx, y: sy, z: sz };
-      if (Math.hypot(x - sx, y - sy) > 5.5) continue;
+      if (Math.hypot(x - sx, y - sy) > 8.0) continue;
       if (!isToothSurfaceVertex(x, y, z, nz, center, jawType)) continue;
       cluster.push({ x, y, z });
     }
 
-    if (cluster.length < 25) return { ...seed };
+    if (cluster.length < 10) return { ...seed };
 
     const zPeak = Math.max(...cluster.map((p) => p.z));
     let sw = 0;

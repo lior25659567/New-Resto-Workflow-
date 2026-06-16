@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Plus, ChevronDown, X, Pencil, Circle } from "lucide-react";
 import { useInlineRename } from "./useInlineRename";
@@ -10,12 +10,19 @@ import LeftLateral from "../imports/LeftLateral";
 import Protrusive from "../imports/Protrusive";
 import Retrusive from "../imports/Retrusive";
 import ScanProgressBar from "../imports/ScanProgressBar";
+import { BiteUnderTabToast } from "./UndoToast";
 
 interface Tab {
   id: string;
   label: string;
   type: "treatment" | "bite" | "pre-treatment" | "additional";
   hasScanned?: boolean;
+}
+
+interface UnderTabToast {
+  title: string;
+  body: string;
+  visible: boolean;
 }
 
 interface ChromeTabsProps {
@@ -36,6 +43,9 @@ interface ChromeTabsProps {
   onStudyModelAdditionalBiteToggle?: () => void;
   isScanning?: boolean;
   onDeleteTab?: (tabId: string) => void;
+  underTabToast?: UnderTabToast;
+  /** Tab id whose bottom edge the under-tab toast should be anchored below */
+  underTabToastAnchorId?: string | null;
 }
 
 export function ChromeTabs({
@@ -56,12 +66,29 @@ export function ChromeTabs({
   onStudyModelAdditionalBiteToggle,
   isScanning,
   onDeleteTab,
+  underTabToast,
+  underTabToastAnchorId,
 }: ChromeTabsProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isBiteExpanded, setIsBiteExpanded] = useState(false);
   const [isBiteOverlayOpen, setIsBiteOverlayOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
+  // Ref map for tab elements — keyed by tab id, used to position under-tab toast
+  const tabElRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [underTabToastLeft, setUnderTabToastLeft] = useState<number>(16);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Recompute toast horizontal position whenever the anchor tab changes
+  useLayoutEffect(() => {
+    if (!underTabToastAnchorId) return;
+    const el = tabElRefs.current[underTabToastAnchorId];
+    const container = containerRef.current;
+    if (!el || !container) return;
+    const tabRect = el.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    setUnderTabToastLeft(tabRect.left - containerRect.left);
+  }, [underTabToastAnchorId, tabs]);
 
   // Inline rename hook for additional scan tabs
   const rename = useInlineRename({
@@ -238,7 +265,7 @@ export function ChromeTabs({
   };
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full" ref={containerRef}>
       <div className="flex items-end px-[16px] gap-[2px] bg-[rgba(255,255,255,0.2)] pt-[16px] border-t border-gray-300 pr-[16px] pb-[0px] pl-[16px]">
         {tabs?.map((tab, index) => {
           const isActive = activeTabId === tab.id;
@@ -279,6 +306,7 @@ export function ChromeTabs({
           return (
             <div
               key={tab.id}
+              ref={el => { tabElRefs.current[tab.id] = el; }}
               className={`relative px-[16px] flex items-center justify-center transition-all group ${tabClasses}`}
               style={{
                 fontFamily: "'Roboto', sans-serif",
@@ -685,6 +713,20 @@ export function ChromeTabs({
           </div>
         )}
       </div>
+
+      {/* Under-tab bite notification toast — anchored below the reference bite tab */}
+      {underTabToast && underTabToastAnchorId && (
+        <div
+          className="absolute z-[60] pointer-events-none"
+          style={{ top: '100%', left: underTabToastLeft, marginTop: 6 }}
+        >
+          <BiteUnderTabToast
+            title={underTabToast.title}
+            body={underTabToast.body}
+            visible={underTabToast.visible}
+          />
+        </div>
+      )}
 
       {/* Bite Options Toggle Button and Floating Overlay - Show when on Additional bites tab */}
       {selectedBiteOptions.length > 0 && tabs.find(tab => tab.type === 'bite' && tab.id === activeTabId) && (
